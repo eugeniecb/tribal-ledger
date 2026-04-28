@@ -2,7 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { createUserClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Copy, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
+import CopyButton from "./CopyButton";
 
 interface Props {
   params: Promise<{ leagueId: string }>;
@@ -99,18 +100,5 @@ export default async function LeagueHomePage({ params }: Props) {
         </Link>
       </div>
     </div>
-  );
-}
-
-function CopyButton({ code }: { code: string }) {
-  // Client component inline for simplicity
-  return (
-    <button
-      onClick={() => navigator.clipboard.writeText(code)}
-      className="text-jungle-mid hover:text-torch transition-colors"
-      title="Copy invite code"
-    >
-      <Copy size={13} />
-    </button>
   );
 }
