@@ -1,12 +1,44 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createUserClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
 const schema = z.object({ name: z.string().min(1).max(60) });
 
 function generateInviteCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+async function getOrCreateDefaultSeasonId(supabase: ReturnType<typeof createServiceClient>) {
+  const { data: latestSeason, error: latestError } = await supabase
+    .from("seasons")
+    .select("id")
+    .order("number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (latestError) return { id: null, error: latestError.message };
+  if (latestSeason?.id) return { id: latestSeason.id, error: null };
+
+  const seasonNumber = parseInt(process.env.FSG_SEASON_NUMBER ?? "50", 10);
+  const recapUrl = process.env.FSG_RECAP_URL ?? "https://www.fantasysurvivorgame.com/episode-recap/season/50";
+
+  const { data: createdSeason, error: createError } = await supabase
+    .from("seasons")
+    .insert({
+      number: seasonNumber,
+      name: `Survivor ${seasonNumber}`,
+      total_episodes: 13,
+      fsg_recap_url: recapUrl,
+      episode_lock_weekday: 3,
+      episode_lock_hour_et: 20,
+    })
+    .select("id")
+    .single();
+
+  if (createError) return { id: null, error: createError.message };
+
+  return { id: createdSeason.id, error: null };
 }
 
 export async function POST(req: Request) {
@@ -24,9 +56,14 @@ export async function POST(req: Request) {
   // Ensure profile exists
   await supabase.from("profiles").upsert({ id: userId, display_name: parsed.data.name, email: "" }, { onConflict: "id", ignoreDuplicates: true });
 
-  // Get default season (latest)
-  const { data: season } = await supabase.from("seasons").select("id").order("number", { ascending: false }).limit(1).single();
-  if (!season) return NextResponse.json({ error: "No season configured" }, { status: 500 });
+  // Get default season (latest), or bootstrap one for fresh installs.
+  const { id: seasonId, error: seasonError } = await getOrCreateDefaultSeasonId(supabase);
+  if (!seasonId) {
+    return NextResponse.json(
+      { error: seasonError ?? "No season configured" },
+      { status: 500 }
+    );
+  }
 
   // Generate unique invite code
   let inviteCode = generateInviteCode();
@@ -38,7 +75,7 @@ export async function POST(req: Request) {
 
   const { data: league, error: leagueError } = await supabase
     .from("leagues")
-    .insert({ name: parsed.data.name, invite_code: inviteCode, season_id: season.id, owner_id: userId })
+    .insert({ name: parsed.data.name, invite_code: inviteCode, season_id: seasonId, owner_id: userId })
     .select("id, name, invite_code")
     .single();
 
