@@ -3,6 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
 
+function getSupabasePublishableKey() {
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+}
+
 // User-scoped client: passes Clerk JWT so Supabase RLS sees auth.jwt()->>'sub'
 export async function createUserClient() {
   const { getToken } = await auth();
@@ -12,7 +17,7 @@ export async function createUserClient() {
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabasePublishableKey()!,
     {
       cookies: {
         getAll() { return cookieStore.getAll(); },
