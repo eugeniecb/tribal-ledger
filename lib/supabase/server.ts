@@ -6,7 +6,7 @@ import { auth } from "@clerk/nextjs/server";
 // User-scoped client: passes Clerk JWT so Supabase RLS sees auth.jwt()->>'sub'
 export async function createUserClient() {
   const { getToken } = await auth();
-  const token = await getToken({ template: "supabase" });
+  const token = await getToken();
 
   const cookieStore = await cookies();
 
