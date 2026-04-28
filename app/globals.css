@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-torch: #c0392b;
+  --color-torch-dark: #96281b;
+  --color-sand: #f5f0e8;
+  --color-sand-dark: #e8dcc8;
+  --color-jungle: #1e3a2f;
+  --color-jungle-mid: #2d5a3d;
+  --color-parchment: #faf7f2;
+}
+
+body {
+  @apply bg-parchment text-jungle font-sans antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+}

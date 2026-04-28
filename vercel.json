@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/jobs/import-episode-results",
+      "schedule": "59 5 * * 4"
+    }
+  ]
+}
