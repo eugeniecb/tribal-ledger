@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
+import { parseLeagueRuleSet } from "@/lib/rules";
 
 const schema = z.object({
   member_id: z.string().uuid(),
@@ -23,12 +24,23 @@ export async function POST(req: Request) {
   // Verify ownership
   const { data: member } = await supabase
     .from("league_members")
-    .select("id")
+    .select("id, league_id")
     .eq("id", member_id)
     .eq("profile_id", userId)
     .single();
 
   if (!member) return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+
+  const { data: league } = await supabase
+    .from("leagues")
+    .select("rule_set")
+    .eq("id", member.league_id)
+    .single();
+
+  const rules = parseLeagueRuleSet((league as any)?.rule_set);
+  if (!rules.sole_survivor_enabled) {
+    return NextResponse.json({ error: "Sole Survivor is disabled for this league" }, { status: 409 });
+  }
 
   // Castaway must not be eliminated
   const { data: castaway } = await supabase

@@ -9,19 +9,11 @@ import type {
   MemberDelta,
   DeltaBreakdownItem,
 } from "./types";
-
-export const WEEKLY_WAGER_BUDGET = 10;
+import { DEFAULT_LEAGUE_RULE_SET } from "./rules";
 
 // Default scoring: event key -> points
 export const DEFAULT_SCORING_RULES: ScoringRules = {
-  "individual immunity": 5,
-  "tribe immunity": 3,
-  "individual reward": 2,
-  "tribe reward": 2,
-  "gain immunity idol": 3,
-  "gain advantage": 2,
-  "voted out": 0,
-  "quit/evac": 0,
+  ...DEFAULT_LEAGUE_RULE_SET.event_points,
 };
 
 // ---- Castaway scoring ----
@@ -101,6 +93,7 @@ export interface WagerSettlementInput {
   wager: WeeklyWager;
   votedOutNames: string[];
   castaways: Castaway[];
+  winMultiplier?: number;
 }
 
 export function settleWager({
@@ -108,6 +101,7 @@ export function settleWager({
   wager,
   votedOutNames,
   castaways,
+  winMultiplier = 1,
 }: WagerSettlementInput): MemberDelta {
   const votedOutIds = new Set(
     votedOutNames
@@ -137,8 +131,9 @@ export function settleWager({
     const castaway = castawayById.get(castawayId);
     const name = castaway?.name ?? castawayId;
     if (votedOutIds.has(castawayId)) {
-      breakdown.push({ source: "wager", castawayName: name, reason: "extra wager won", delta: amount });
-      deltaVotePoints += amount;
+      const won = Math.round(amount * winMultiplier);
+      breakdown.push({ source: "wager", castawayName: name, reason: "extra wager won", delta: won });
+      deltaVotePoints += won;
     } else {
       breakdown.push({ source: "wager", castawayName: name, reason: "extra wager lost", delta: -amount });
       deltaVotePoints -= amount;
@@ -190,15 +185,16 @@ export interface WagerValidationError {
 export function validateWager(
   budgetAllocations: Record<string, number>,
   extraWagers: Record<string, number>,
-  availableVotePoints: number
+  availableVotePoints: number,
+  weeklyBudget: number
 ): WagerValidationError[] {
   const errors: WagerValidationError[] = [];
 
   const budgetTotal = Object.values(budgetAllocations).reduce((s, v) => s + v, 0);
-  if (budgetTotal > WEEKLY_WAGER_BUDGET) {
+  if (budgetTotal > weeklyBudget) {
     errors.push({
       field: "budgetAllocations",
-      message: `Budget allocations total ${budgetTotal} exceeds weekly budget of ${WEEKLY_WAGER_BUDGET}.`,
+      message: `Budget allocations total ${budgetTotal} exceeds weekly budget of ${weeklyBudget}.`,
     });
   }
   for (const [id, v] of Object.entries(budgetAllocations)) {

@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { createUserClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import WagerClient from "./WagerClient";
+import { parseLeagueRuleSet } from "@/lib/rules";
 
 interface Props {
   params: Promise<{ leagueId: string }>;
@@ -34,13 +35,25 @@ export default async function WagerPage({ params }: Props) {
 
   const { data: league } = await supabase
     .from("leagues")
-    .select("season_id, seasons(total_episodes, episode_lock_weekday, episode_lock_hour_et)")
+    .select("season_id, rule_set, seasons(total_episodes, episode_lock_weekday, episode_lock_hour_et)")
     .eq("id", leagueId)
     .single();
 
   if (!league) notFound();
 
   const episodeNumber = await getCurrentEpisodeNumber(supabase, league.season_id);
+  const rules = parseLeagueRuleSet((league as any).rule_set);
+
+  if (!rules.wagers_enabled) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-10">
+        <h1 className="text-3xl font-bold text-jungle mb-2">Episode {episodeNumber} Wager</h1>
+        <div className="p-4 bg-sand rounded-xl border border-sand-dark text-jungle-mid text-sm">
+          Wagers are disabled for this league.
+        </div>
+      </div>
+    );
+  }
 
   const { data: castaways } = await supabase
     .from("castaways")
@@ -87,6 +100,7 @@ export default async function WagerPage({ params }: Props) {
           memberId={myMember.id}
           episodeNumber={episodeNumber}
           availableVotePoints={myMember.vote_points}
+          weeklyBudget={rules.weekly_wager_budget}
           castaways={castaways ?? []}
           existing={existingWager ?? null}
         />

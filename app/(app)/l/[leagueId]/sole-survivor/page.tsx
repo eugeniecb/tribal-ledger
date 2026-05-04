@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { createUserClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import SoleSurvivorClient from "./SoleSurvivorClient";
+import { parseLeagueRuleSet } from "@/lib/rules";
 
 interface Props {
   params: Promise<{ leagueId: string }>;
@@ -23,11 +24,23 @@ export default async function SoleSurvivorPage({ params }: Props) {
 
   const { data: league } = await supabase
     .from("leagues")
-    .select("season_id, seasons(total_episodes)")
+    .select("season_id, rule_set, seasons(total_episodes)")
     .eq("id", leagueId)
     .single();
 
   if (!league) notFound();
+  const rules = parseLeagueRuleSet((league as any).rule_set);
+
+  if (!rules.sole_survivor_enabled) {
+    return (
+      <div className="max-w-xl mx-auto px-6 py-10">
+        <h1 className="text-3xl font-bold text-jungle mb-2">Sole Survivor Pick</h1>
+        <div className="p-4 bg-sand rounded-xl border border-sand-dark text-jungle-mid text-sm">
+          Sole Survivor is disabled for this league.
+        </div>
+      </div>
+    );
+  }
 
   const { data: castaways } = await supabase
     .from("castaways")

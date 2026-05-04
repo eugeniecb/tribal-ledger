@@ -1,9 +1,14 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
+import { DEFAULT_LEAGUE_RULE_SET, leagueRuleSetSchema } from "@/lib/rules";
 
-const schema = z.object({ name: z.string().min(1).max(60) });
+const schema = z.object({
+  name: z.string().min(1).max(60),
+  tribe_name: z.string().min(1).max(60),
+  rule_set: leagueRuleSetSchema.optional(),
+});
 
 function generateInviteCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -44,17 +49,23 @@ async function getOrCreateDefaultSeasonId(supabase: ReturnType<typeof createServ
 export async function POST(req: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await currentUser();
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request", issues: parsed.error.issues }, { status: 400 });
   }
+  const ruleSet = parsed.data.rule_set ?? DEFAULT_LEAGUE_RULE_SET;
 
   const supabase = createServiceClient();
 
   // Ensure profile exists
-  await supabase.from("profiles").upsert({ id: userId, display_name: parsed.data.name, email: "" }, { onConflict: "id", ignoreDuplicates: true });
+  await supabase.from("profiles").upsert({
+    id: userId,
+    display_name: user?.firstName ?? user?.username ?? user?.emailAddresses?.[0]?.emailAddress ?? "Player",
+    email: user?.emailAddresses?.[0]?.emailAddress ?? "",
+  }, { onConflict: "id" });
 
   // Get default season (latest), or bootstrap one for fresh installs.
   const { id: seasonId, error: seasonError } = await getOrCreateDefaultSeasonId(supabase);
@@ -75,7 +86,13 @@ export async function POST(req: Request) {
 
   const { data: league, error: leagueError } = await supabase
     .from("leagues")
-    .insert({ name: parsed.data.name, invite_code: inviteCode, season_id: seasonId, owner_id: userId })
+    .insert({
+      name: parsed.data.name,
+      invite_code: inviteCode,
+      season_id: seasonId,
+      owner_id: userId,
+      rule_set: ruleSet,
+    })
     .select("id, name, invite_code")
     .single();
 
@@ -85,6 +102,7 @@ export async function POST(req: Request) {
   await supabase.from("league_members").insert({
     league_id: league.id,
     profile_id: userId,
+    tribe_name: parsed.data.tribe_name.trim(),
     role: "owner",
   });
 

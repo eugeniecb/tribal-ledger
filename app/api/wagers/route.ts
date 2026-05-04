@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { validateWager } from "@/lib/scoring";
+import { parseLeagueRuleSet } from "@/lib/rules";
 
 const schema = z.object({
   member_id: z.string().uuid(),
@@ -47,9 +48,14 @@ export async function POST(req: Request) {
   // Check lock time server-side
   const { data: league } = await supabase
     .from("leagues")
-    .select("season_id, seasons(episode_lock_weekday, episode_lock_hour_et)")
+    .select("season_id, rule_set, seasons(episode_lock_weekday, episode_lock_hour_et)")
     .eq("id", member.league_id)
     .single();
+
+  const rules = parseLeagueRuleSet((league as any)?.rule_set);
+  if (!rules.wagers_enabled) {
+    return NextResponse.json({ error: "Wagers are disabled for this league" }, { status: 409 });
+  }
 
   const season: any = (league as any)?.seasons;
   if (season) {
@@ -70,7 +76,7 @@ export async function POST(req: Request) {
   }
 
   // Validate amounts
-  const errors = validateWager(budget_allocations, extra_wagers, available_vote_points);
+  const errors = validateWager(budget_allocations, extra_wagers, available_vote_points, rules.weekly_wager_budget);
   if (errors.length > 0) return NextResponse.json({ error: "Validation failed", errors }, { status: 422 });
 
   // Upsert

@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { fetchAndParseFSG } from "@/lib/fsg-parser";
 import { scoreEpisodeCastaways, settleWager } from "@/lib/scoring";
 import type { Castaway, LeagueMember, TeamAssignment, WeeklyWager, EpisodeFacts, MemberDelta } from "@/lib/types";
+import { parseLeagueRuleSet } from "@/lib/rules";
 
 export const runtime = "nodejs";
 
@@ -78,11 +79,12 @@ export async function GET(req: Request) {
   }
 
   // Fetch all leagues for this season
-  const { data: leagues } = await supabase.from("leagues").select("id").eq("season_id", season.id);
+  const { data: leagues } = await supabase.from("leagues").select("id, rule_set").eq("season_id", season.id);
 
   const results = [];
 
   for (const league of leagues ?? []) {
+    const rules = parseLeagueRuleSet((league as any).rule_set);
     // Skip if draft already exists for this import + league
     const { data: existingDraft } = await supabase
       .from("score_drafts")
@@ -106,10 +108,12 @@ export async function GET(req: Request) {
 
     const [{ data: assignments }, { data: wagers }] = await Promise.all([
       supabase.from("team_assignments").select("*").in("member_id", memberIds),
-      supabase.from("weekly_wagers")
-        .select("*")
-        .in("member_id", memberIds)
-        .eq("episode_number", latest.episodeNumber),
+      rules.wagers_enabled
+        ? supabase.from("weekly_wagers")
+            .select("*")
+            .in("member_id", memberIds)
+            .eq("episode_number", latest.episodeNumber)
+        : Promise.resolve({ data: [], error: null } as any),
     ]);
 
     // Score castaways
@@ -117,7 +121,8 @@ export async function GET(req: Request) {
       latest as EpisodeFacts,
       (castaways ?? []) as Castaway[],
       (members ?? []) as LeagueMember[],
-      (assignments ?? []) as TeamAssignment[]
+      (assignments ?? []) as TeamAssignment[],
+      rules.event_points
     );
 
     // Settle wagers
@@ -130,6 +135,7 @@ export async function GET(req: Request) {
         wager: wager as WeeklyWager,
         votedOutNames: latest.votedOutNames,
         castaways: (castaways ?? []) as Castaway[],
+        winMultiplier: rules.extra_wager_win_multiplier,
       });
       wagerDeltas.push(delta);
     }

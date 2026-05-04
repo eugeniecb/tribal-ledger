@@ -4,7 +4,6 @@ import {
   scoreEpisodeCastaways,
   scoreSoleSurvivor,
   validateWager,
-  WEEKLY_WAGER_BUDGET,
 } from "../lib/scoring";
 import type { LeagueMember, WeeklyWager, Castaway, TeamAssignment, EpisodeFacts, SoleSurvivorPick } from "../lib/types";
 
@@ -12,6 +11,7 @@ const makeMember = (id: string, votePoints = 30): LeagueMember => ({
   id,
   league_id: "l1",
   profile_id: id,
+  tribe_name: null,
   role: "member",
   castaway_points: 0,
   vote_points: votePoints,
@@ -102,22 +102,22 @@ describe("settleWager", () => {
 
 describe("validateWager", () => {
   it("accepts valid wager", () => {
-    const errors = validateWager({ c1: 6, c2: 4 }, { c1: 5 }, 30);
+    const errors = validateWager({ c1: 6, c2: 4 }, { c1: 5 }, 30, 10);
     expect(errors).toHaveLength(0);
   });
 
   it("rejects budget over limit", () => {
-    const errors = validateWager({ c1: 10, c2: 1 }, {}, 30);
+    const errors = validateWager({ c1: 10, c2: 1 }, {}, 30, 10);
     expect(errors.some((e) => e.field === "budgetAllocations")).toBe(true);
   });
 
   it("rejects extra wager over available", () => {
-    const errors = validateWager({}, { c1: 31 }, 30);
+    const errors = validateWager({}, { c1: 31 }, 30, 10);
     expect(errors.some((e) => e.field === "extraWagers")).toBe(true);
   });
 
   it("rejects negative values", () => {
-    const errors = validateWager({ c1: -1 }, { c2: -5 }, 30);
+    const errors = validateWager({ c1: -1 }, { c2: -5 }, 30, 10);
     expect(errors.length).toBeGreaterThan(0);
   });
 });

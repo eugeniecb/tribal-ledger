@@ -37,6 +37,7 @@ export interface League {
   invite_code: string;
   season_id: string;
   owner_id: string;
+  rule_set: LeagueRuleSet;
   created_at: string;
 }
 
@@ -44,6 +45,7 @@ export interface LeagueMember {
   id: string;
   league_id: string;
   profile_id: string;
+  tribe_name: string | null;
   role: Role;
   castaway_points: number;
   vote_points: number;
@@ -102,6 +104,14 @@ export interface EpisodeFacts {
 // ---- Scoring engine ----
 
 export type ScoringRules = Record<string, number>;
+
+export interface LeagueRuleSet {
+  event_points: ScoringRules;
+  weekly_wager_budget: number;
+  extra_wager_win_multiplier: number;
+  wagers_enabled: boolean;
+  sole_survivor_enabled: boolean;
+}
 
 export interface MemberDelta {
   memberId: string;

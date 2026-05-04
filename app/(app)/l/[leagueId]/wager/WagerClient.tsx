@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Check, AlertCircle } from "lucide-react";
-import { WEEKLY_WAGER_BUDGET } from "@/lib/scoring";
 
 interface Castaway {
   id: string;
@@ -16,11 +15,12 @@ interface Props {
   memberId: string;
   episodeNumber: number;
   availableVotePoints: number;
+  weeklyBudget: number;
   castaways: Castaway[];
   existing: { budget_allocations: Record<string, number>; extra_wagers: Record<string, number> } | null;
 }
 
-export default function WagerClient({ memberId, episodeNumber, availableVotePoints, castaways, existing }: Props) {
+export default function WagerClient({ memberId, episodeNumber, availableVotePoints, weeklyBudget, castaways, existing }: Props) {
   const [budget, setBudget] = useState<Record<string, number>>(existing?.budget_allocations ?? {});
   const [extra, setExtra] = useState<Record<string, number>>(existing?.extra_wagers ?? {});
   const [saving, setSaving] = useState(false);
@@ -29,7 +29,7 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
 
   const budgetTotal = Object.values(budget).reduce((s, v) => s + (Number(v) || 0), 0);
   const extraTotal = Object.values(extra).reduce((s, v) => s + (Number(v) || 0), 0);
-  const budgetRemaining = WEEKLY_WAGER_BUDGET - budgetTotal;
+  const budgetRemaining = weeklyBudget - budgetTotal;
   const extraRemaining = availableVotePoints - extraTotal;
 
   function setAllocation(castawayId: string, value: string, pool: "budget" | "extra") {
@@ -75,7 +75,7 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
         <div className={`flex-1 p-3 rounded-lg border ${budgetRemaining < 0 ? "border-red-400 bg-red-50" : "border-sand-dark bg-sand"}`}>
           <p className="text-jungle-mid text-xs mb-0.5">Weekly Budget Remaining</p>
           <p className={`text-2xl font-bold ${budgetRemaining < 0 ? "text-red-600" : "text-jungle"}`}>{budgetRemaining}</p>
-          <p className="text-jungle-mid text-xs">of {WEEKLY_WAGER_BUDGET} free pts</p>
+          <p className="text-jungle-mid text-xs">of {weeklyBudget} free pts</p>
         </div>
         <div className={`flex-1 p-3 rounded-lg border ${extraRemaining < 0 ? "border-red-400 bg-red-50" : "border-sand-dark bg-sand"}`}>
           <p className="text-jungle-mid text-xs mb-0.5">Extra Wager Remaining</p>
@@ -107,7 +107,7 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
             <input
               type="number"
               min={0}
-              max={WEEKLY_WAGER_BUDGET}
+              max={weeklyBudget}
               value={budget[c.id] ?? ""}
               onChange={(e) => setAllocation(c.id, e.target.value, "budget")}
               placeholder="0"
