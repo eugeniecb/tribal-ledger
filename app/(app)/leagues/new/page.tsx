@@ -49,7 +49,7 @@ export default function NewLeaguePage() {
   }
 
   return (
-    <div className="max-w-md mx-auto px-6 py-16">
+    <div className="max-w-3xl mx-auto px-6 py-16">
       <h1 className="text-3xl font-bold text-jungle mb-2">Create a League</h1>
       <p className="text-jungle-mid mb-8">Give your league a name and share the invite code with friends.</p>
 
@@ -105,7 +105,7 @@ export default function NewLeaguePage() {
                 className="h-4 w-4 accent-torch"
               />
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-sm text-jungle">
                 Weekly wager budget
                 <input
@@ -114,7 +114,7 @@ export default function NewLeaguePage() {
                   max={100}
                   value={weeklyBudget}
                   onChange={(e) => setWeeklyBudget(Math.max(0, Number.parseInt(e.target.value || "0", 10)))}
-                  className="mt-1 w-full border border-sand-dark rounded-lg px-3 py-2 text-jungle focus:outline-none focus:ring-2 focus:ring-torch focus:border-transparent"
+                  className="mt-1 h-12 w-full border border-sand-dark rounded-lg px-3 text-jungle focus:outline-none focus:ring-2 focus:ring-torch focus:border-transparent"
                 />
               </label>
               <label className="text-sm text-jungle">
@@ -126,7 +126,7 @@ export default function NewLeaguePage() {
                   step="0.1"
                   value={extraMultiplier}
                   onChange={(e) => setExtraMultiplier(Number.parseFloat(e.target.value || "0"))}
-                  className="mt-1 w-full border border-sand-dark rounded-lg px-3 py-2 text-jungle focus:outline-none focus:ring-2 focus:ring-torch focus:border-transparent"
+                  className="mt-1 h-12 w-full border border-sand-dark rounded-lg px-3 text-jungle focus:outline-none focus:ring-2 focus:ring-torch focus:border-transparent"
                 />
               </label>
             </div>
@@ -134,7 +134,7 @@ export default function NewLeaguePage() {
               <p className="text-xs font-medium text-jungle-mid uppercase tracking-wide mb-2">Event points</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {EVENT_KEYS.map((key) => (
-                  <label key={key} className="text-sm text-jungle flex items-center justify-between gap-3">
+                  <label key={key} className="text-sm text-jungle flex items-center justify-between gap-3 rounded-lg border border-sand-dark px-3 py-2 bg-sand/30">
                     <span className="capitalize">{key}</span>
                     <input
                       type="number"
@@ -147,7 +147,7 @@ export default function NewLeaguePage() {
                           [key]: Number.parseInt(e.target.value || "0", 10),
                         }))
                       }
-                      className="w-20 border border-sand-dark rounded px-2 py-1 text-right text-jungle focus:outline-none focus:ring-1 focus:ring-torch"
+                      className="h-12 w-24 border border-sand-dark rounded-lg px-3 text-right text-jungle focus:outline-none focus:ring-1 focus:ring-torch bg-white"
                     />
                   </label>
                 ))}

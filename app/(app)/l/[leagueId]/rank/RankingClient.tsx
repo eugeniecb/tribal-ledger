@@ -121,7 +121,7 @@ function SortableItem({ castaway, rank }: { castaway: Castaway; rank: number }) 
       <div className="w-8 h-8 rounded-full bg-sand-dark overflow-hidden flex-shrink-0">
         {castaway.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={castaway.image_url} alt={castaway.name} className="w-full h-full object-cover" />
+          <img src={castaway.image_url} alt={castaway.name} className="w-full h-full object-cover object-[50%_20%]" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-sm font-bold text-jungle-mid">
             {castaway.name[0]}

@@ -65,7 +65,7 @@ function CastawayCard({ castaway }: { castaway: Castaway }) {
       <div className="aspect-square bg-sand-dark relative">
         {castaway.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={castaway.image_url} alt={castaway.name} className="w-full h-full object-cover" />
+          <img src={castaway.image_url} alt={castaway.name} className="w-full h-full object-cover object-[50%_20%]" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-jungle-mid">
             {castaway.name[0]}

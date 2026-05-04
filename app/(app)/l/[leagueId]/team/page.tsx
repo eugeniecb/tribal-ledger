@@ -67,7 +67,7 @@ export default async function TeamPage({ params }: Props) {
                 <div className="aspect-square bg-sand-dark relative">
                   {c.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
+                    <img src={c.image_url} alt={c.name} className="w-full h-full object-cover object-[50%_20%]" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-jungle-mid">
                       {c.name[0]}

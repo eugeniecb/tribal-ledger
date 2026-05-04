@@ -97,7 +97,7 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
               <div className="w-7 h-7 rounded-full bg-sand-dark overflow-hidden flex-shrink-0">
                 {c.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
+                  <img src={c.image_url} alt={c.name} className="w-full h-full object-cover object-[50%_20%]" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs font-bold text-jungle-mid">{c.name[0]}</div>
                 )}
