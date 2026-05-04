@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { Flame } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 
-export default function RulesPage() {
+export default async function RulesPage() {
+  const { userId } = await auth();
+
   return (
     <div className="min-h-screen bg-parchment">
-      <PublicNav />
+      <PublicNav signedIn={Boolean(userId)} />
       <main className="max-w-3xl mx-auto px-6 py-16">
         <h1 className="text-4xl font-bold text-jungle mb-2">Rules</h1>
         <p className="text-jungle-mid mb-12">Detailed scoring and gameplay rules.</p>
@@ -103,7 +107,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function PublicNav() {
+function PublicNav({ signedIn }: { signedIn: boolean }) {
   return (
     <nav className="flex items-center justify-between px-6 py-4 border-b border-sand-dark bg-white">
       <Link href="/" className="font-bold text-xl tracking-tight flex items-center gap-2 text-jungle">
@@ -114,10 +118,19 @@ function PublicNav() {
         <Link href="/how-to-play" className="hover:text-torch transition-colors">How to Play</Link>
         <Link href="/rules" className="font-medium text-torch">Rules</Link>
         <Link href="/cast" className="hover:text-torch transition-colors">Cast</Link>
-        <Link href="/sign-in" className="hover:text-torch transition-colors">Sign In</Link>
-        <Link href="/sign-up" className="bg-torch text-white px-4 py-1.5 rounded-md hover:bg-torch-dark transition-colors">
-          Sign Up
-        </Link>
+        {signedIn ? (
+          <>
+            <Link href="/dashboard" className="hover:text-torch transition-colors">Dashboard</Link>
+            <UserButton />
+          </>
+        ) : (
+          <>
+            <Link href="/sign-in" className="hover:text-torch transition-colors">Sign In</Link>
+            <Link href="/sign-up" className="bg-torch text-white px-4 py-1.5 rounded-md hover:bg-torch-dark transition-colors">
+              Sign Up
+            </Link>
+          </>
+        )}
       </div>
     </nav>
   );

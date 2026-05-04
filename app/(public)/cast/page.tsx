@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { Flame } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { Castaway, Season } from "@/lib/types";
 
 export const revalidate = 3600;
 
 export default async function CastPage() {
+  const { userId } = await auth();
   let castaways: Castaway[] = [];
   let season: Season | null = null;
 
@@ -31,7 +34,7 @@ export default async function CastPage() {
 
   return (
     <div className="min-h-screen bg-parchment">
-      <PublicNav />
+      <PublicNav signedIn={Boolean(userId)} />
       <main className="max-w-5xl mx-auto px-6 py-16">
         <h1 className="text-4xl font-bold text-jungle mb-2">
           {season ? `Season ${season.number} Cast` : "Season 50 Cast"}
@@ -82,7 +85,7 @@ function CastawayCard({ castaway }: { castaway: Castaway }) {
   );
 }
 
-function PublicNav() {
+function PublicNav({ signedIn }: { signedIn: boolean }) {
   return (
     <nav className="flex items-center justify-between px-6 py-4 border-b border-sand-dark bg-white">
       <Link href="/" className="font-bold text-xl tracking-tight flex items-center gap-2 text-jungle">
@@ -93,10 +96,19 @@ function PublicNav() {
         <Link href="/how-to-play" className="hover:text-torch transition-colors">How to Play</Link>
         <Link href="/rules" className="hover:text-torch transition-colors">Rules</Link>
         <Link href="/cast" className="font-medium text-torch">Cast</Link>
-        <Link href="/sign-in" className="hover:text-torch transition-colors">Sign In</Link>
-        <Link href="/sign-up" className="bg-torch text-white px-4 py-1.5 rounded-md hover:bg-torch-dark transition-colors">
-          Sign Up
-        </Link>
+        {signedIn ? (
+          <>
+            <Link href="/dashboard" className="hover:text-torch transition-colors">Dashboard</Link>
+            <UserButton />
+          </>
+        ) : (
+          <>
+            <Link href="/sign-in" className="hover:text-torch transition-colors">Sign In</Link>
+            <Link href="/sign-up" className="bg-torch text-white px-4 py-1.5 rounded-md hover:bg-torch-dark transition-colors">
+              Sign Up
+            </Link>
+          </>
+        )}
       </div>
     </nav>
   );

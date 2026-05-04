@@ -1,7 +1,11 @@
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { Flame, Users, Trophy, Scroll } from "lucide-react";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { userId } = await auth();
+
   return (
     <div className="min-h-screen bg-jungle text-sand">
       {/* Nav */}
@@ -14,10 +18,19 @@ export default function HomePage() {
           <Link href="/how-to-play" className="hover:text-torch transition-colors">How to Play</Link>
           <Link href="/rules" className="hover:text-torch transition-colors">Rules</Link>
           <Link href="/cast" className="hover:text-torch transition-colors">Cast</Link>
-          <Link href="/sign-in" className="hover:text-torch transition-colors">Sign In</Link>
-          <Link href="/sign-up" className="bg-torch text-white px-4 py-1.5 rounded-md hover:bg-torch-dark transition-colors">
-            Sign Up
-          </Link>
+          {userId ? (
+            <>
+              <Link href="/dashboard" className="hover:text-torch transition-colors">Dashboard</Link>
+              <UserButton />
+            </>
+          ) : (
+            <>
+              <Link href="/sign-in" className="hover:text-torch transition-colors">Sign In</Link>
+              <Link href="/sign-up" className="bg-torch text-white px-4 py-1.5 rounded-md hover:bg-torch-dark transition-colors">
+                Sign Up
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 
