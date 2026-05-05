@@ -6,15 +6,34 @@ import { runAssignment } from "@/lib/assignment";
 
 const schema = z.object({ leagueId: z.string().uuid() });
 
+async function parseLeagueId(req: Request): Promise<string | null> {
+  const contentType = req.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    const body = await req.json().catch(() => null);
+    const parsed = schema.safeParse(body);
+    return parsed.success ? parsed.data.leagueId : null;
+  }
+
+  if (
+    contentType.includes("application/x-www-form-urlencoded") ||
+    contentType.includes("multipart/form-data")
+  ) {
+    const formData = await req.formData().catch(() => null);
+    const parsed = schema.safeParse({ leagueId: formData?.get("leagueId") });
+    return parsed.success ? parsed.data.leagueId : null;
+  }
+
+  return null;
+}
+
 export async function POST(req: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json().catch(() => null);
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  const leagueId = await parseLeagueId(req);
+  if (!leagueId) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-  const { leagueId } = parsed.data;
   const supabase = createServiceClient();
 
   // Verify admin
