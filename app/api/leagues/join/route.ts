@@ -28,11 +28,12 @@ export async function POST(req: Request) {
 
   const { data: league } = await supabase
     .from("leagues")
-    .select("id, name")
+    .select("id, name, archived_at")
     .eq("invite_code", parsed.data.invite_code.toUpperCase())
     .maybeSingle();
 
   if (!league) return NextResponse.json({ error: "League not found. Check the invite code." }, { status: 404 });
+  if (league.archived_at) return NextResponse.json({ error: "This league has been archived." }, { status: 409 });
 
   // Check if already a member
   const { data: existing } = await supabase
