@@ -28,7 +28,14 @@ export default async function TeamPage({ params }: Props) {
     .eq("member_id", myMember.id)
     .order("slot");
 
+  const { data: league } = await supabase
+    .from("leagues")
+    .select("assignment_locked_at")
+    .eq("id", leagueId)
+    .single();
+
   const isAdmin = myMember.role === "owner";
+  const canRunAssignment = isAdmin && !league?.assignment_locked_at;
 
   return (
     <div className="max-w-xl mx-auto px-6 py-10">
@@ -37,7 +44,7 @@ export default async function TeamPage({ params }: Props) {
           <h1 className="text-3xl font-bold text-jungle">My Team</h1>
           <p className="text-jungle-mid mt-1 text-sm">Your 2 assigned castaways</p>
         </div>
-        {isAdmin && (
+        {canRunAssignment && (
           <form action={`/api/assignments/run`} method="POST">
             <input type="hidden" name="leagueId" value={leagueId} />
             <button
@@ -49,6 +56,11 @@ export default async function TeamPage({ params }: Props) {
           </form>
         )}
       </div>
+      {isAdmin && league?.assignment_locked_at && (
+        <p className="text-xs text-jungle-mid mb-6">
+          Team assignments were finalized on {new Date(league.assignment_locked_at).toLocaleDateString()} and cannot be run again.
+        </p>
+      )}
 
       {!assignments || assignments.length === 0 ? (
         <div className="text-center py-16 bg-sand rounded-xl border border-sand-dark text-jungle-mid">

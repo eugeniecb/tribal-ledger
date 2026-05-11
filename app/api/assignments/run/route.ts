@@ -35,7 +35,7 @@ function isFormSubmission(req: Request): boolean {
   );
 }
 
-function redirectToTeam(req: Request, leagueId: string, status: "ok" | "error") {
+function redirectToTeam(req: Request, leagueId: string, status: "ok" | "error" | "locked") {
   return NextResponse.redirect(new URL(`/l/${leagueId}/team?assignment=${status}`, req.url), 303);
 }
 
@@ -67,9 +67,18 @@ export async function POST(req: Request) {
     .select("id, profiles(display_name)")
     .eq("league_id", leagueId);
 
-  const { data: league, error: leagueError } = await supabase.from("leagues").select("season_id").eq("id", leagueId).single();
+  const { data: league, error: leagueError } = await supabase
+    .from("leagues")
+    .select("season_id, assignment_locked_at")
+    .eq("id", leagueId)
+    .single();
   if (leagueError || !league) {
     return fromForm ? redirectToTeam(req, leagueId, "error") : NextResponse.json({ error: "League not found" }, { status: 404 });
+  }
+  if (league.assignment_locked_at) {
+    return fromForm
+      ? redirectToTeam(req, leagueId, "locked")
+      : NextResponse.json({ error: "Assignment has already been finalized for this league" }, { status: 409 });
   }
 
   const { data: castawaysData, error: castawaysError } = await supabase
@@ -105,6 +114,15 @@ export async function POST(req: Request) {
   const { error: insertError } = await supabase.from("team_assignments").insert(result.assignments);
   if (insertError) {
     return fromForm ? redirectToTeam(req, leagueId, "error") : NextResponse.json({ error: insertError.message }, { status: 500 });
+  }
+
+  const { error: lockError } = await supabase
+    .from("leagues")
+    .update({ assignment_locked_at: new Date().toISOString() })
+    .eq("id", leagueId)
+    .is("assignment_locked_at", null);
+  if (lockError) {
+    return fromForm ? redirectToTeam(req, leagueId, "error") : NextResponse.json({ error: lockError.message }, { status: 500 });
   }
 
   // Audit
