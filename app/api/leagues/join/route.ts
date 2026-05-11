@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 
-const schema = z.object({ invite_code: z.string().min(1).max(10) });
+const schema = z.object({
+  invite_code: z.string().min(1).max(10),
+  tribe_name: z.string().min(1).max(60),
+});
 
 export async function POST(req: Request) {
   const { userId } = await auth();
@@ -44,6 +47,7 @@ export async function POST(req: Request) {
   const { error } = await supabase.from("league_members").insert({
     league_id: league.id,
     profile_id: userId,
+    tribe_name: parsed.data.tribe_name.trim(),
     role: "member",
   });
 

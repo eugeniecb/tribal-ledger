@@ -25,7 +25,7 @@ export default async function LeagueHomePage({ params }: Props) {
 
   const { data: members } = await supabase
     .from("league_members")
-    .select("id, profile_id, role, castaway_points, vote_points, profiles(display_name)")
+    .select("id, profile_id, tribe_name, role, castaway_points, vote_points, profiles(display_name)")
     .eq("league_id", leagueId)
     .order("castaway_points", { ascending: false });
 
@@ -80,7 +80,12 @@ export default async function LeagueHomePage({ params }: Props) {
                   <tr key={member.id} className={`border-b border-sand-dark last:border-0 ${isMe ? "bg-sand/60" : "bg-white hover:bg-sand/40"}`}>
                     <td className="px-4 py-3 text-jungle-mid">{i + 1}</td>
                     <td className="px-4 py-3 font-medium text-jungle">
-                      {member.profiles?.display_name ?? "—"}
+                      {member.tribe_name ?? member.profiles?.display_name ?? "—"}
+                      {member.tribe_name && (
+                        <span className="ml-1.5 font-normal text-jungle-mid">
+                          ({member.profiles?.display_name ?? "—"})
+                        </span>
+                      )}
                       {isMe && <span className="ml-1.5 text-xs text-torch">(you)</span>}
                     </td>
                     <td className="px-4 py-3 text-right text-jungle-mid">{member.castaway_points}</td>
