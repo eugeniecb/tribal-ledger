@@ -25,16 +25,22 @@ export default async function AdminPage({ params }: Props) {
 
   const { data: drafts } = await supabase
     .from("score_drafts")
-    .select("id, status, created_at, approved_at, episode_imports(episode_number), deltas")
+    .select("id, status, created_at, approved_at, episode_imports(episode_number, raw_facts), deltas")
     .eq("league_id", leagueId)
     .order("created_at", { ascending: false });
+
+  const { data: league } = await supabase
+    .from("leagues")
+    .select("rule_set")
+    .eq("id", leagueId)
+    .single();
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-10">
       <h1 className="text-3xl font-bold text-jungle mb-2">Admin Panel</h1>
       <p className="text-jungle-mid text-sm mb-8">Review and approve weekly score drafts.</p>
 
-      <AdminClient drafts={(drafts ?? []) as any[]} leagueId={leagueId} userId={userId!} />
+      <AdminClient drafts={(drafts ?? []) as any[]} leagueId={leagueId} userId={userId!} ruleSet={(league as any)?.rule_set ?? null} />
     </div>
   );
 }
