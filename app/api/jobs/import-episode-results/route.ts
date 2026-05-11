@@ -8,13 +8,15 @@ import { parseLeagueRuleSet } from "@/lib/rules";
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  // Auth: require CRON_SECRET in production
+  // Auth: CRON_SECRET is mandatory; fail closed if missing.
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const authHeader = req.headers.get("authorization");
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!cronSecret) {
+    return NextResponse.json({ error: "Server misconfigured: CRON_SECRET is required" }, { status: 500 });
+  }
+
+  const authHeader = req.headers.get("authorization");
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const fsgUrl = process.env.FSG_RECAP_URL ?? "https://www.fantasysurvivorgame.com/episode-recap/season/50";

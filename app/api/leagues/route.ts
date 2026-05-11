@@ -99,12 +99,17 @@ export async function POST(req: Request) {
   if (leagueError) return NextResponse.json({ error: leagueError.message }, { status: 500 });
 
   // Add creator as owner member
-  await supabase.from("league_members").insert({
+  const { error: memberInsertError } = await supabase.from("league_members").insert({
     league_id: league.id,
     profile_id: userId,
     tribe_name: parsed.data.tribe_name.trim(),
     role: "owner",
   });
+
+  if (memberInsertError) {
+    await supabase.from("leagues").delete().eq("id", league.id);
+    return NextResponse.json({ error: `Failed to create owner membership: ${memberInsertError.message}` }, { status: 500 });
+  }
 
   return NextResponse.json(league, { status: 201 });
 }

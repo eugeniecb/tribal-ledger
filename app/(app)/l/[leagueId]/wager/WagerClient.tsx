@@ -50,7 +50,6 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
         body: JSON.stringify({
           member_id: memberId,
           episode_number: episodeNumber,
-          available_vote_points: availableVotePoints,
           budget_allocations: Object.fromEntries(Object.entries(budget).filter(([, v]) => v > 0)),
           extra_wagers: Object.fromEntries(Object.entries(extra).filter(([, v]) => v > 0)),
         }),
