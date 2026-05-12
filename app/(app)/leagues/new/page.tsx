@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { DEFAULT_LEAGUE_RULE_SET, EVENT_KEYS } from "@/lib/rules";
+import { DEFAULT_LEAGUE_RULE_SET, EVENT_KEYS, LEAGUE_MODE_PRESETS, type GameMode } from "@/lib/rules";
 
 export default function NewLeaguePage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [tribeName, setTribeName] = useState("");
+  const [gameMode, setGameMode] = useState<GameMode>("classic");
   const [eventPoints, setEventPoints] = useState<Record<string, number>>({
     ...DEFAULT_LEAGUE_RULE_SET.event_points,
   });
@@ -17,6 +18,20 @@ export default function NewLeaguePage() {
   const [soleSurvivorEnabled, setSoleSurvivorEnabled] = useState(DEFAULT_LEAGUE_RULE_SET.sole_survivor_enabled);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function applyPreset(mode: Exclude<GameMode, "custom">) {
+    const preset = LEAGUE_MODE_PRESETS[mode];
+    setGameMode(mode);
+    setEventPoints({ ...preset.event_points });
+    setWeeklyBudget(preset.weekly_wager_budget);
+    setExtraMultiplier(preset.extra_wager_win_multiplier);
+    setWagersEnabled(preset.wagers_enabled);
+    setSoleSurvivorEnabled(preset.sole_survivor_enabled);
+  }
+
+  function markCustomMode() {
+    if (gameMode !== "custom") setGameMode("custom");
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +45,7 @@ export default function NewLeaguePage() {
           name,
           tribe_name: tribeName,
           rule_set: {
+            game_mode: gameMode,
             event_points: eventPoints,
             weekly_wager_budget: weeklyBudget,
             extra_wager_win_multiplier: extraMultiplier,
@@ -86,13 +102,43 @@ export default function NewLeaguePage() {
         </div>
         <section className="rounded-xl border border-sand-dark bg-white p-4">
           <h2 className="text-sm font-semibold text-jungle mb-3">League Rules (locked after create)</h2>
+          <div className="mb-4">
+            <p className="text-xs font-medium text-jungle-mid uppercase tracking-wide mb-2">Game Mode</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { key: "classic", label: "Classic" },
+                { key: "high_risk", label: "High Risk" },
+                { key: "no_wagers", label: "No Wagers" },
+                { key: "idol_hunter", label: "Idol Hunter" },
+              ].map((mode) => (
+                <button
+                  key={mode.key}
+                  type="button"
+                  onClick={() => applyPreset(mode.key as Exclude<GameMode, "custom">)}
+                  className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                    gameMode === mode.key
+                      ? "border-torch bg-torch/10 text-jungle font-semibold"
+                      : "border-sand-dark text-jungle-mid hover:bg-sand"
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+            {gameMode === "custom" && (
+              <p className="mt-2 text-xs text-jungle-mid">Custom mode (based on a preset with manual edits)</p>
+            )}
+          </div>
           <div className="space-y-3">
             <label className="flex items-center justify-between gap-3">
               <span className="text-sm text-jungle">Wagers enabled</span>
               <input
                 type="checkbox"
                 checked={wagersEnabled}
-                onChange={(e) => setWagersEnabled(e.target.checked)}
+                onChange={(e) => {
+                  markCustomMode();
+                  setWagersEnabled(e.target.checked);
+                }}
                 className="h-4 w-4 accent-torch"
               />
             </label>
@@ -101,7 +147,10 @@ export default function NewLeaguePage() {
               <input
                 type="checkbox"
                 checked={soleSurvivorEnabled}
-                onChange={(e) => setSoleSurvivorEnabled(e.target.checked)}
+                onChange={(e) => {
+                  markCustomMode();
+                  setSoleSurvivorEnabled(e.target.checked);
+                }}
                 className="h-4 w-4 accent-torch"
               />
             </label>
@@ -113,7 +162,10 @@ export default function NewLeaguePage() {
                   min={0}
                   max={100}
                   value={weeklyBudget}
-                  onChange={(e) => setWeeklyBudget(Math.max(0, Number.parseInt(e.target.value || "0", 10)))}
+                  onChange={(e) => {
+                    markCustomMode();
+                    setWeeklyBudget(Math.max(0, Number.parseInt(e.target.value || "0", 10)));
+                  }}
                   className="mt-1 h-12 w-full border border-sand-dark rounded-lg px-3 text-jungle focus:outline-none focus:ring-2 focus:ring-torch focus:border-transparent"
                 />
               </label>
@@ -125,7 +177,10 @@ export default function NewLeaguePage() {
                   max={10}
                   step="0.1"
                   value={extraMultiplier}
-                  onChange={(e) => setExtraMultiplier(Number.parseFloat(e.target.value || "0"))}
+                  onChange={(e) => {
+                    markCustomMode();
+                    setExtraMultiplier(Number.parseFloat(e.target.value || "0"));
+                  }}
                   className="mt-1 h-12 w-full border border-sand-dark rounded-lg px-3 text-jungle focus:outline-none focus:ring-2 focus:ring-torch focus:border-transparent"
                 />
               </label>
@@ -142,10 +197,13 @@ export default function NewLeaguePage() {
                       max={50}
                       value={eventPoints[key]}
                       onChange={(e) =>
-                        setEventPoints((prev) => ({
-                          ...prev,
-                          [key]: Number.parseInt(e.target.value || "0", 10),
-                        }))
+                        {
+                          markCustomMode();
+                          setEventPoints((prev) => ({
+                            ...prev,
+                            [key]: Number.parseInt(e.target.value || "0", 10),
+                          }));
+                        }
                       }
                       className="h-12 w-24 border border-sand-dark rounded-lg px-3 text-right text-jungle focus:outline-none focus:ring-1 focus:ring-torch bg-white"
                     />

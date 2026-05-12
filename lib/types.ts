@@ -106,6 +106,7 @@ export interface EpisodeFacts {
 export type ScoringRules = Record<string, number>;
 
 export interface LeagueRuleSet {
+  game_mode?: "classic" | "high_risk" | "no_wagers" | "idol_hunter" | "custom";
   event_points: ScoringRules;
   weekly_wager_budget: number;
   extra_wager_win_multiplier: number;

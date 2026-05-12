@@ -29,6 +29,14 @@ export default async function LeagueRulesPage({ params }: Props) {
 
   if (!league) notFound();
   const rules = parseLeagueRuleSet((league as any).rule_set);
+  const modeLabelMap: Record<string, string> = {
+    classic: "Classic",
+    high_risk: "High Risk",
+    no_wagers: "No Wagers",
+    idol_hunter: "Idol Hunter",
+    custom: "Custom",
+  };
+  const modeLabel = modeLabelMap[rules.game_mode ?? "classic"] ?? "Classic";
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
@@ -40,6 +48,10 @@ export default async function LeagueRulesPage({ params }: Props) {
       <div className="bg-white border border-sand-dark rounded-xl p-5 mb-4">
         <h2 className="text-sm font-semibold text-jungle mb-3">Modules</h2>
         <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex items-center justify-between rounded-lg bg-sand px-3 py-2">
+            <span className="text-jungle-mid">Game Mode</span>
+            <span className="font-medium text-jungle">{modeLabel}</span>
+          </div>
           <div className="flex items-center justify-between rounded-lg bg-sand px-3 py-2">
             <span className="text-jungle-mid">Wagers</span>
             <span className="font-medium text-jungle">{rules.wagers_enabled ? "Enabled" : "Disabled"}</span>
@@ -79,4 +91,3 @@ export default async function LeagueRulesPage({ params }: Props) {
     </div>
   );
 }
-
