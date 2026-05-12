@@ -34,7 +34,9 @@ export default async function DashboardPage() {
       .select("id, league_id, role, castaway_points, vote_points, leagues(id, name, invite_code, archived_at)")
       .eq("profile_id", userId!);
 
-    if (!dbError && data) {
+    if (dbError) {
+      error = true;
+    } else if (data) {
       leagues = data.map((row: any) => ({
         id: row.leagues.id,
         name: row.leagues.name,
