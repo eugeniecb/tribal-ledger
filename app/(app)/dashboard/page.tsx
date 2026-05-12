@@ -38,18 +38,18 @@ export default async function DashboardPage() {
       error = true;
     } else if (data) {
       leagues = data.map((row: any) => ({
-        id: row.leagues.id,
-        name: row.leagues.name,
-        invite_code: row.leagues.invite_code,
+        id: row.leagues?.id ?? row.league_id,
+        name: row.leagues?.name ?? "Unknown League",
+        invite_code: row.leagues?.invite_code ?? "—",
         castaway_points: row.castaway_points,
         vote_points: row.vote_points,
         role: row.role,
-        archived_at: row.leagues.archived_at ?? null,
-      }));
+        archived_at: row.leagues?.archived_at ?? null,
+      })).filter((l) => Boolean(l.id));
 
       const recipientMemberIds = data.map((row: any) => row.id).filter(Boolean);
       if (recipientMemberIds.length > 0) {
-        const { data: pendingMessages } = await supabase
+        const { data: pendingMessages, error: trashTalkError } = await supabase
           .from("trash_talk_messages")
           .select("id, message, created_at, league_id, sender_member_id, recipient_member_id")
           .in("recipient_member_id", recipientMemberIds)
@@ -57,27 +57,29 @@ export default async function DashboardPage() {
           .order("created_at", { ascending: false })
           .limit(1);
 
-        const latest = pendingMessages?.[0];
-        if (latest) {
-          const [{ data: sender }, { data: leagueRow }] = await Promise.all([
-            supabase
-              .from("league_members")
-              .select("tribe_name, profile_id, profiles(display_name)")
-              .eq("id", (latest as any).sender_member_id)
-              .maybeSingle(),
-            supabase
-              .from("leagues")
-              .select("name")
-              .eq("id", (latest as any).league_id)
-              .maybeSingle(),
-          ]);
+        if (!trashTalkError) {
+          const latest = pendingMessages?.[0];
+          if (latest) {
+            const [{ data: sender }, { data: leagueRow }] = await Promise.all([
+              supabase
+                .from("league_members")
+                .select("tribe_name, profile_id, profiles(display_name)")
+                .eq("id", (latest as any).sender_member_id)
+                .maybeSingle(),
+              supabase
+                .from("leagues")
+                .select("name")
+                .eq("id", (latest as any).league_id)
+                .maybeSingle(),
+            ]);
 
-          trashTalkBanner = {
-            messageId: (latest as any).id,
-            message: (latest as any).message,
-            senderName: (sender as any)?.tribe_name ?? (sender as any)?.profiles?.display_name ?? (sender as any)?.profile_id ?? "A tribemate",
-            leagueName: (leagueRow as any)?.name ?? "Your league",
-          };
+            trashTalkBanner = {
+              messageId: (latest as any).id,
+              message: (latest as any).message,
+              senderName: (sender as any)?.tribe_name ?? (sender as any)?.profiles?.display_name ?? (sender as any)?.profile_id ?? "A tribemate",
+              leagueName: (leagueRow as any)?.name ?? "Your league",
+            };
+          }
         }
       }
     }
