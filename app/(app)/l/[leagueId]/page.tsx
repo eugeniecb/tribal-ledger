@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Zap } from "lucide-react";
 import CopyButton from "./CopyButton";
+import TrashTalkButton from "./TrashTalkButton";
 
 interface Props {
   params: Promise<{ leagueId: string }>;
@@ -71,6 +72,7 @@ export default async function LeagueHomePage({ params }: Props) {
                 <th className="text-right px-4 py-2.5 text-jungle font-medium">Cast Pts</th>
                 <th className="text-right px-4 py-2.5 text-jungle font-medium">Vote Pts</th>
                 <th className="text-right px-4 py-2.5 text-jungle font-medium">Total</th>
+                <th className="text-right px-4 py-2.5 text-jungle font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -91,6 +93,17 @@ export default async function LeagueHomePage({ params }: Props) {
                     <td className="px-4 py-3 text-right text-jungle-mid">{member.castaway_points}</td>
                     <td className="px-4 py-3 text-right text-jungle-mid">{member.vote_points}</td>
                     <td className="px-4 py-3 text-right font-bold text-jungle">{member.castaway_points + member.vote_points}</td>
+                    <td className="px-4 py-3">
+                      {!isMe ? (
+                        <TrashTalkButton
+                          leagueId={leagueId}
+                          recipientMemberId={member.id}
+                          recipientName={member.tribe_name ?? member.profiles?.display_name ?? "player"}
+                        />
+                      ) : (
+                        <span className="text-xs text-jungle-mid">—</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
