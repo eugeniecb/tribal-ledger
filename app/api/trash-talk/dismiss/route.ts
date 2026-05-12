@@ -17,20 +17,20 @@ export async function POST(req: Request) {
 
   const supabase = createServiceClient();
 
-  const { data: recipientMember } = await supabase
-    .from("league_members")
-    .select("id")
-    .eq("profile_id", userId)
-    .single();
-  if (!recipientMember) return NextResponse.json({ error: "No league membership found for user" }, { status: 404 });
-
   const { data: msg } = await supabase
     .from("trash_talk_messages")
     .select("id, recipient_member_id")
     .eq("id", parsed.data.message_id)
     .single();
   if (!msg) return NextResponse.json({ error: "Message not found" }, { status: 404 });
-  if ((msg as any).recipient_member_id !== (recipientMember as any).id) {
+
+  const { data: recipientMember } = await supabase
+    .from("league_members")
+    .select("id")
+    .eq("id", (msg as any).recipient_member_id)
+    .eq("profile_id", userId)
+    .maybeSingle();
+  if (!recipientMember) {
     return NextResponse.json({ error: "Not allowed to dismiss this message" }, { status: 403 });
   }
 
