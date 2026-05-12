@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Zap } from "lucide-react";
 import CopyButton from "./CopyButton";
 import TrashTalkButton from "./TrashTalkButton";
+import TrashTalkBanner from "./TrashTalkBanner";
 
 interface Props {
   params: Promise<{ leagueId: string }>;
@@ -31,7 +32,39 @@ export default async function LeagueHomePage({ params }: Props) {
     .order("castaway_points", { ascending: false });
 
   const myMember = members?.find((m: any) => m.profile_id === userId);
+  if (!myMember) notFound();
   const isAdmin = myMember?.role === "owner";
+
+  let trashTalkBanner:
+    | {
+        messageId: string;
+        senderName: string;
+        message: string;
+      }
+    | null = null;
+  const { data: pendingMessages, error: trashTalkError } = await supabase
+    .from("trash_talk_messages")
+    .select("id, message, sender_member_id")
+    .eq("league_id", leagueId)
+    .eq("recipient_member_id", myMember.id)
+    .is("dismissed_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (!trashTalkError && pendingMessages?.[0]) {
+    const latest = pendingMessages[0] as any;
+    const { data: sender } = await supabase
+      .from("league_members")
+      .select("tribe_name, profile_id, profiles(display_name)")
+      .eq("id", latest.sender_member_id)
+      .maybeSingle();
+
+    trashTalkBanner = {
+      messageId: latest.id,
+      senderName: (sender as any)?.tribe_name ?? (sender as any)?.profiles?.display_name ?? (sender as any)?.profile_id ?? "A tribemate",
+      message: latest.message,
+    };
+  }
 
   const sorted = (members ?? []).slice().sort((a: any, b: any) => {
     const totalB = b.castaway_points + b.vote_points;
@@ -59,6 +92,14 @@ export default async function LeagueHomePage({ params }: Props) {
           </Link>
         )}
       </div>
+
+      {trashTalkBanner && (
+        <TrashTalkBanner
+          messageId={trashTalkBanner.messageId}
+          senderName={trashTalkBanner.senderName}
+          message={trashTalkBanner.message}
+        />
+      )}
 
       {/* Standings */}
       <section>

@@ -5,11 +5,10 @@ import { useState } from "react";
 interface Props {
   messageId: string;
   senderName: string;
-  leagueName: string;
   message: string;
 }
 
-export default function TrashTalkBanner({ messageId, senderName, leagueName, message }: Props) {
+export default function TrashTalkBanner({ messageId, senderName, message }: Props) {
   const [hidden, setHidden] = useState(false);
   const [dismissing, setDismissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +38,7 @@ export default function TrashTalkBanner({ messageId, senderName, leagueName, mes
     <div className="mb-6 rounded-xl border border-torch/40 bg-torch/10 p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-jungle">Trash Talk Received ({leagueName})</p>
+          <p className="text-sm font-semibold text-jungle">Trash Talk Received</p>
           <p className="text-sm text-jungle-mid mt-0.5">
             <span className="font-medium text-jungle">{senderName}</span> sent you a message:
           </p>

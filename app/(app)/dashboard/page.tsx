@@ -2,7 +2,6 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { Plus, LogIn, Trophy } from "lucide-react";
 import { createUserClient } from "@/lib/supabase/server";
-import TrashTalkBanner from "./TrashTalkBanner";
 import ArchiveLeagueButton from "./ArchiveLeagueButton";
 
 export default async function DashboardPage() {
@@ -19,14 +18,6 @@ export default async function DashboardPage() {
     archived_at: string | null;
   }[] = [];
   let error = false;
-  let trashTalkBanner:
-    | {
-        messageId: string;
-        message: string;
-        senderName: string;
-        leagueName: string;
-      }
-    | null = null;
 
   try {
     const supabase = await createUserClient();
@@ -48,41 +39,6 @@ export default async function DashboardPage() {
         archived_at: row.leagues?.archived_at ?? null,
       })).filter((l) => Boolean(l.id));
 
-      const recipientMemberIds = data.map((row: any) => row.id).filter(Boolean);
-      if (recipientMemberIds.length > 0) {
-        const { data: pendingMessages, error: trashTalkError } = await supabase
-          .from("trash_talk_messages")
-          .select("id, message, created_at, league_id, sender_member_id, recipient_member_id")
-          .in("recipient_member_id", recipientMemberIds)
-          .is("dismissed_at", null)
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        if (!trashTalkError) {
-          const latest = pendingMessages?.[0];
-          if (latest) {
-            const [{ data: sender }, { data: leagueRow }] = await Promise.all([
-              supabase
-                .from("league_members")
-                .select("tribe_name, profile_id, profiles(display_name)")
-                .eq("id", (latest as any).sender_member_id)
-                .maybeSingle(),
-              supabase
-                .from("leagues")
-                .select("name")
-                .eq("id", (latest as any).league_id)
-                .maybeSingle(),
-            ]);
-
-            trashTalkBanner = {
-              messageId: (latest as any).id,
-              message: (latest as any).message,
-              senderName: (sender as any)?.tribe_name ?? (sender as any)?.profiles?.display_name ?? (sender as any)?.profile_id ?? "A tribemate",
-              leagueName: (leagueRow as any)?.name ?? "Your league",
-            };
-          }
-        }
-      }
     }
   } catch {
     error = true;
@@ -99,15 +55,6 @@ export default async function DashboardPage() {
         <h1 className="text-3xl font-bold text-jungle">Welcome back, {displayName}</h1>
         <p className="text-jungle-mid mt-1">Your leagues</p>
       </div>
-
-      {trashTalkBanner && (
-        <TrashTalkBanner
-          messageId={trashTalkBanner.messageId}
-          senderName={trashTalkBanner.senderName}
-          leagueName={trashTalkBanner.leagueName}
-          message={trashTalkBanner.message}
-        />
-      )}
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
