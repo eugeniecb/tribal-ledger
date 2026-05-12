@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Plus, LogIn, Trophy } from "lucide-react";
 import { createUserClient } from "@/lib/supabase/server";
 import TrashTalkBanner from "./TrashTalkBanner";
+import ArchiveLeagueButton from "./ArchiveLeagueButton";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -135,19 +136,7 @@ export default async function DashboardPage() {
                 </div>
               </div>
               {league.role === "owner" && (
-                <form action={`/api/leagues/${league.id}/archive`} method="POST" className="mt-3">
-                  <button
-                    type="submit"
-                    className="text-xs text-jungle-mid underline hover:text-torch"
-                    onClick={(e) => {
-                      if (!confirm(`Archive "${league.name}"? You can still view it, but it will move to Archived Leagues.`)) {
-                        e.preventDefault();
-                      }
-                    }}
-                  >
-                    Archive League
-                  </button>
-                </form>
+                <ArchiveLeagueButton leagueId={league.id} leagueName={league.name} />
               )}
             </div>
           ))
