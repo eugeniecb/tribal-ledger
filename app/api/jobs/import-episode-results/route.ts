@@ -4,6 +4,7 @@ import { fetchAndParseFSG } from "@/lib/fsg-parser";
 import { scoreEpisodeCastaways, settleWager } from "@/lib/scoring";
 import type { Castaway, LeagueMember, TeamAssignment, WeeklyWager, EpisodeFacts, MemberDelta } from "@/lib/types";
 import { parseLeagueRuleSet } from "@/lib/rules";
+import { sendDraftReadyEmail } from "@/lib/notifications/email";
 
 export const runtime = "nodejs";
 
@@ -81,7 +82,7 @@ export async function GET(req: Request) {
   }
 
   // Fetch all leagues for this season
-  const { data: leagues } = await supabase.from("leagues").select("id, rule_set").eq("season_id", season.id);
+  const { data: leagues } = await supabase.from("leagues").select("id, name, rule_set").eq("season_id", season.id);
 
   const results = [];
 
@@ -158,6 +159,7 @@ export async function GET(req: Request) {
     const mergedDeltas = Array.from(deltaMap.values());
 
     // Upsert score draft
+    const isNewDraft = !existingDraft?.id;
     const { error: draftError } = await supabase.from("score_drafts").upsert({
       ...(existingDraft?.id ? { id: existingDraft.id } : {}),
       league_id: league.id,
@@ -167,7 +169,30 @@ export async function GET(req: Request) {
       created_at: new Date().toISOString(),
     }, { onConflict: "id" });
 
-    results.push({ league_id: league.id, error: draftError?.message, deltas: mergedDeltas.length });
+    let email: { sent: boolean; reason?: string } = { sent: false, reason: "Not attempted" };
+    if (!draftError && isNewDraft) {
+      const { data: owners } = await supabase
+        .from("league_members")
+        .select("profiles(email)")
+        .eq("league_id", league.id)
+        .eq("role", "owner");
+      const recipientEmails = (owners ?? [])
+        .map((o: any) => o.profiles?.email as string | undefined)
+        .filter((e): e is string => Boolean(e));
+      email = await sendDraftReadyEmail({
+        to: recipientEmails,
+        leagueName: (league as any).name ?? "Your league",
+        leagueId: league.id,
+        episodeNumber: latest.episodeNumber,
+      });
+    }
+
+    results.push({
+      league_id: league.id,
+      error: draftError?.message,
+      deltas: mergedDeltas.length,
+      email,
+    });
   }
 
   return NextResponse.json({ episode: latest.episodeNumber, leagues: results.length, results });

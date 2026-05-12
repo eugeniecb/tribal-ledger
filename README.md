@@ -52,6 +52,12 @@ Required values:
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
 - `CRON_SECRET`
+- `APP_BASE_URL` (e.g. `https://your-app.vercel.app`)
+- `EMAIL_FROM`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
 
 ## Supabase + Clerk Setup
 
