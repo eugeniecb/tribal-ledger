@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
   const { data: league } = await supabase
     .from("leagues")
-    .select("rule_set")
+    .select("season_id, rule_set")
     .eq("id", member.league_id)
     .single();
 
@@ -42,11 +42,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Sole Survivor is disabled for this league" }, { status: 409 });
   }
 
-  // Castaway must not be eliminated
+  // Castaway must be in this league's season and not eliminated
   const { data: castaway } = await supabase
     .from("castaways")
     .select("is_eliminated")
     .eq("id", castaway_id)
+    .eq("season_id", (league as any).season_id)
     .single();
 
   if (!castaway) return NextResponse.json({ error: "Castaway not found" }, { status: 404 });

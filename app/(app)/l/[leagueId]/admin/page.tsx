@@ -29,6 +29,11 @@ export default async function AdminPage({ params }: Props) {
     .eq("league_id", leagueId)
     .order("created_at", { ascending: false });
 
+  const { data: members } = await supabase
+    .from("league_members")
+    .select("id, profile_id, tribe_name, profiles(display_name)")
+    .eq("league_id", leagueId);
+
   const { data: league } = await supabase
     .from("leagues")
     .select("rule_set")
@@ -40,7 +45,13 @@ export default async function AdminPage({ params }: Props) {
       <h1 className="text-3xl font-bold text-jungle mb-2">Admin Panel</h1>
       <p className="text-jungle-mid text-sm mb-8">Review and approve weekly score drafts.</p>
 
-      <AdminClient drafts={(drafts ?? []) as any[]} leagueId={leagueId} userId={userId!} ruleSet={(league as any)?.rule_set ?? null} />
+      <AdminClient
+        drafts={(drafts ?? []) as any[]}
+        leagueId={leagueId}
+        userId={userId!}
+        ruleSet={(league as any)?.rule_set ?? null}
+        members={(members ?? []) as any[]}
+      />
     </div>
   );
 }

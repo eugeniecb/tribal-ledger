@@ -32,9 +32,15 @@ interface Props {
   ruleSet: {
     event_points?: Record<string, number>;
   } | null;
+  members: {
+    id: string;
+    profile_id: string;
+    tribe_name: string | null;
+    profiles?: { display_name?: string | null } | null;
+  }[];
 }
 
-export default function AdminClient({ drafts, leagueId, userId, ruleSet }: Props) {
+export default function AdminClient({ drafts, leagueId, userId, ruleSet, members }: Props) {
   const [localDrafts, setLocalDrafts] = useState(drafts);
   const [approving, setApproving] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
@@ -56,6 +62,16 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet }: Props
     const points = ruleSet?.event_points ?? {};
     return EVENT_KEYS.map((k) => ({ key: k, points: points[k] ?? 0 }));
   }, [ruleSet]);
+  const memberNameMap = useMemo(
+    () =>
+      new Map(
+        (members ?? []).map((m) => [
+          m.id,
+          m.tribe_name ?? m.profiles?.display_name ?? m.profile_id ?? m.id,
+        ])
+      ),
+    [members]
+  );
 
   async function handleApprove(draftId: string) {
     setApproving(draftId);
@@ -324,7 +340,9 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet }: Props
                     <tbody>
                       {(draft.deltas ?? []).map((d) => (
                         <tr key={d.memberId} className="border-b border-sand-dark/50 last:border-0">
-                          <td className="py-2 text-jungle font-mono text-xs truncate max-w-[140px]">{d.memberId}</td>
+                          <td className="py-2 text-jungle truncate max-w-[180px]">
+                            {memberNameMap.get(d.memberId) ?? "Unknown Player"}
+                          </td>
                           <td className="py-2 text-right text-jungle">{d.deltaCastawayPoints >= 0 ? "+" : ""}{d.deltaCastawayPoints}</td>
                           <td className="py-2 text-right text-jungle">{d.deltaVotePoints >= 0 ? "+" : ""}{d.deltaVotePoints}</td>
                         </tr>

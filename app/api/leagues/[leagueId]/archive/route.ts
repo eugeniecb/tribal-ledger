@@ -23,11 +23,10 @@ export async function POST(
     return NextResponse.json({ error: "Only league owners can archive leagues" }, { status: 403 });
   }
 
-  const { error } = await supabase
-    .from("leagues")
-    .update({ archived_at: new Date().toISOString() })
-    .eq("id", leagueId)
-    .is("archived_at", null);
+  const { error } = await supabase.rpc("archive_league", {
+    p_league_id: leagueId,
+    p_actor_id: userId,
+  });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
