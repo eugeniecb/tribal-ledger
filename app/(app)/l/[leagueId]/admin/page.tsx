@@ -36,9 +36,17 @@ export default async function AdminPage({ params }: Props) {
 
   const { data: league } = await supabase
     .from("leagues")
-    .select("rule_set")
+    .select("rule_set, season_id")
     .eq("id", leagueId)
     .single();
+
+  const { data: castaways } = league?.season_id
+    ? await supabase
+        .from("castaways")
+        .select("id, name, is_eliminated")
+        .eq("season_id", league.season_id)
+        .order("name")
+    : { data: [] };
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-10">
@@ -51,6 +59,7 @@ export default async function AdminPage({ params }: Props) {
         userId={userId!}
         ruleSet={(league as any)?.rule_set ?? null}
         members={(members ?? []) as any[]}
+        castaways={(castaways ?? []) as { id: string; name: string; is_eliminated: boolean }[]}
       />
     </div>
   );
