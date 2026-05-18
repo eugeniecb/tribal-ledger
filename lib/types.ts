@@ -38,6 +38,8 @@ export interface League {
   season_id: string;
   owner_id: string;
   rule_set: LeagueRuleSet;
+  assignment_locked_at: string | null;
+  archived_at: string | null;
   created_at: string;
 }
 

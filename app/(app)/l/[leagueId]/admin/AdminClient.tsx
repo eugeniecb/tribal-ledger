@@ -38,14 +38,19 @@ interface Props {
     tribe_name: string | null;
     profiles?: { display_name?: string | null } | null;
   }[];
+  castaways: { id: string; name: string; is_eliminated: boolean }[];
 }
 
-export default function AdminClient({ drafts, leagueId, userId, ruleSet, members }: Props) {
+export default function AdminClient({ drafts, leagueId, userId, ruleSet, members, castaways }: Props) {
   const [localDrafts, setLocalDrafts] = useState(drafts);
   const [approving, setApproving] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [ssWinnerId, setSsWinnerId] = useState("");
+  const [ssSubmitting, setSsSubmitting] = useState(false);
+  const [ssResult, setSsResult] = useState<{ winner: string; picks: number } | null>(null);
+  const [ssError, setSsError] = useState<string | null>(null);
   const [editedFacts, setEditedFacts] = useState<Record<string, EpisodeFacts>>(() =>
     Object.fromEntries(
       drafts.map((d) => [
@@ -183,6 +188,35 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet, members
     });
   }
 
+  const alreadySettled = localDrafts.some(
+    (d) =>
+      d.status === "approved" &&
+      d.deltas.some((delta) => delta.breakdown.some((b) => b.source === "sole_survivor"))
+  );
+
+  async function handleSettleSoleSurvivor() {
+    if (!ssWinnerId) return;
+    setSsSubmitting(true);
+    setSsError(null);
+    setSsResult(null);
+    try {
+      const res = await fetch(`/api/leagues/${leagueId}/settle-sole-survivor`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ castaway_id: ssWinnerId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to settle");
+      setSsResult({ winner: data.winner, picks: data.picks });
+      // Reload page to show the new pending draft
+      window.location.reload();
+    } catch (err: any) {
+      setSsError(err.message);
+    } finally {
+      setSsSubmitting(false);
+    }
+  }
+
   if (localDrafts.length === 0) {
     return (
       <div className="text-center py-16 bg-sand rounded-xl border border-sand-dark text-jungle-mid">
@@ -194,6 +228,46 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet, members
 
   return (
     <div className="space-y-4">
+      {castaways.length > 0 && (
+        <div className="bg-white border border-sand-dark rounded-xl p-5">
+          <h2 className="text-base font-semibold text-jungle mb-1">Settle Sole Survivor</h2>
+          <p className="text-xs text-jungle-mid mb-4">
+            Select the season winner to generate a score draft for all active picks. The draft will appear above for review and approval.
+          </p>
+          {alreadySettled ? (
+            <p className="text-sm text-green-700 font-medium">Sole Survivor has already been settled and approved.</p>
+          ) : (
+            <div className="flex items-center gap-3 flex-wrap">
+              <select
+                value={ssWinnerId}
+                onChange={(e) => setSsWinnerId(e.target.value)}
+                className="border border-sand-dark rounded px-3 py-2 text-sm text-jungle"
+              >
+                <option value="">Select winner…</option>
+                {castaways.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}{c.is_eliminated ? " (elim.)" : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleSettleSoleSurvivor}
+                disabled={!ssWinnerId || ssSubmitting}
+                className="bg-torch text-white text-sm px-4 py-2 rounded-lg hover:bg-torch-dark disabled:opacity-50 transition-colors"
+              >
+                {ssSubmitting ? "Settling…" : "Generate Draft"}
+              </button>
+            </div>
+          )}
+          {ssError && <p className="mt-2 text-sm text-red-600">{ssError}</p>}
+          {ssResult && (
+            <p className="mt-2 text-sm text-green-700">
+              Draft created for {ssResult.winner} — {ssResult.picks} active pick{ssResult.picks !== 1 ? "s" : ""} scored.
+            </p>
+          )}
+        </div>
+      )}
+
       {localDrafts.map((draft) => {
         const ep = draft.episode_imports?.episode_number ?? "?";
         const isExpanded = expanded[draft.id];

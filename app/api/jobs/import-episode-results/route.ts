@@ -179,12 +179,17 @@ export async function GET(req: Request) {
       const recipientEmails = (owners ?? [])
         .map((o: any) => o.profiles?.email as string | undefined)
         .filter((e): e is string => Boolean(e));
-      email = await sendDraftReadyEmail({
-        to: recipientEmails,
-        leagueName: (league as any).name ?? "Your league",
-        leagueId: league.id,
-        episodeNumber: latest.episodeNumber,
-      });
+      try {
+        email = await sendDraftReadyEmail({
+          to: recipientEmails,
+          leagueName: (league as any).name ?? "Your league",
+          leagueId: league.id,
+          episodeNumber: latest.episodeNumber,
+        });
+      } catch (emailErr: any) {
+        console.error(`[import-episode-results] Email send failed for league ${league.id}:`, emailErr);
+        email = { sent: false, reason: emailErr?.message ?? "Email send threw" };
+      }
     }
 
     results.push({
