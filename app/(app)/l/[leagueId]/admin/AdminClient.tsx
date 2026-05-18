@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { EVENT_KEYS } from "@/lib/rules";
 
@@ -42,9 +43,12 @@ interface Props {
 }
 
 export default function AdminClient({ drafts, leagueId, userId, ruleSet, members, castaways }: Props) {
+  const router = useRouter();
   const [localDrafts, setLocalDrafts] = useState(drafts);
   const [approving, setApproving] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [ssWinnerId, setSsWinnerId] = useState("");
@@ -217,6 +221,23 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet, members
     }
   }
 
+  async function handleImportRecaps() {
+    setImporting(true);
+    setImportMessage("");
+    try {
+      const res = await fetch(`/api/leagues/${leagueId}/import-recaps`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to import recaps");
+      const episodes = Array.isArray(data.importedEpisodes) ? data.importedEpisodes.join(", ") : "unknown";
+      setImportMessage(`Imported episodes: ${episodes}`);
+      router.refresh();
+    } catch (err: any) {
+      setImportMessage(err.message ?? "Failed to import recaps");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   if (localDrafts.length === 0) {
     return (
       <div className="text-center py-16 bg-sand rounded-xl border border-sand-dark text-jungle-mid">
@@ -267,7 +288,23 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet, members
           )}
         </div>
       )}
-
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-sand border border-sand-dark rounded-xl px-4 py-3">
+        <p className="text-sm text-jungle-mid">
+          Import all available Season recap episodes and regenerate pending drafts.
+        </p>
+        <button
+          onClick={handleImportRecaps}
+          disabled={importing}
+          className="bg-jungle text-white text-sm px-4 py-2 rounded-lg hover:bg-jungle-mid disabled:opacity-50"
+        >
+          {importing ? "Importing…" : "Import Recaps"}
+        </button>
+      </div>
+      {importMessage && (
+        <p className={`text-sm ${importMessage.toLowerCase().includes("failed") ? "text-red-600" : "text-green-700"}`}>
+          {importMessage}
+        </p>
+      )}
       {localDrafts.map((draft) => {
         const ep = draft.episode_imports?.episode_number ?? "?";
         const isExpanded = expanded[draft.id];

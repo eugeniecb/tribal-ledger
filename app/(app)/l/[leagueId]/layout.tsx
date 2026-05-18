@@ -23,7 +23,7 @@ export default async function LeagueLayout({ children, params }: Props) {
     { href: `/l/${leagueId}/team`, label: "Team", icon: Users },
     { href: `/l/${leagueId}/rank`, label: "Rankings", icon: ListOrdered },
     { href: `/l/${leagueId}/rules`, label: "Rules", icon: Scroll },
-    { href: `/l/${leagueId}/recap/latest`, label: "Recap", icon: ScrollText },
+    { href: `/l/${leagueId}/recap`, label: "Recap", icon: ScrollText },
     { href: `/l/${leagueId}/admin`, label: "Admin", icon: Shield },
   ];
   if (rules.wagers_enabled) navLinks.splice(3, 0, { href: `/l/${leagueId}/wager`, label: "Wager", icon: Zap });

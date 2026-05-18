@@ -34,12 +34,14 @@ export async function GET(req: Request) {
     return NextResponse.json({ message: "No episodes parsed" });
   }
 
-  // Use highest episode number found
-  const latest = episodes.reduce((best, ep) => ep.episodeNumber > best.episodeNumber ? ep : best, episodes[0]);
+  const sortedEpisodes = [...episodes].sort((a, b) => a.episodeNumber - b.episodeNumber);
 
   // Dry run if no service credentials
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return NextResponse.json({ dry_run: true, parsed: latest });
+    return NextResponse.json({
+      dry_run: true,
+      parsedEpisodes: sortedEpisodes.map((ep) => ep.episodeNumber),
+    });
   }
 
   const supabase = createServiceClient();
@@ -55,150 +57,163 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: `Season ${seasonNumber} not found in database` }, { status: 404 });
   }
 
-  // Upsert episode import
-  const { data: importRow, error: importError } = await supabase
-    .from("episode_imports")
-    .upsert({
-      season_id: season.id,
-      episode_number: latest.episodeNumber,
-      raw_facts: latest as any,
-      source_url: fsgUrl,
-      imported_at: new Date().toISOString(),
-    }, { onConflict: "season_id,episode_number" })
-    .select("id")
-    .single();
-
-  if (importError) return NextResponse.json({ error: importError.message }, { status: 500 });
-
   // Fetch all castaways for this season
   const { data: castaways } = await supabase.from("castaways").select("*").eq("season_id", season.id);
-
-  // Mark voted-out castaways as eliminated
-  for (const name of latest.votedOutNames) {
-    const castaway = (castaways ?? []).find((c: any) => c.name.toLowerCase() === name.toLowerCase());
-    if (castaway && !castaway.is_eliminated) {
-      await supabase.from("castaways").update({ is_eliminated: true, eliminated_episode: latest.episodeNumber }).eq("id", castaway.id);
-    }
-  }
 
   // Fetch all leagues for this season
   const { data: leagues } = await supabase.from("leagues").select("id, name, rule_set").eq("season_id", season.id);
 
   const results = [];
+  for (const ep of sortedEpisodes) {
+    // Upsert episode import
+    const { data: importRow, error: importError } = await supabase
+      .from("episode_imports")
+      .upsert(
+        {
+          season_id: season.id,
+          episode_number: ep.episodeNumber,
+          raw_facts: ep as any,
+          source_url: fsgUrl,
+          imported_at: new Date().toISOString(),
+        },
+        { onConflict: "season_id,episode_number" }
+      )
+      .select("id")
+      .single();
 
-  for (const league of leagues ?? []) {
-    const rules = parseLeagueRuleSet((league as any).rule_set);
-    // Skip if draft already exists for this import + league
-    const { data: existingDraft } = await supabase
-      .from("score_drafts")
-      .select("id, status")
-      .eq("league_id", league.id)
-      .eq("episode_import_id", importRow.id)
-      .maybeSingle();
-
-    if (existingDraft?.status === "approved") {
-      results.push({ league_id: league.id, skipped: "already_approved" });
-      continue;
+    if (importError) {
+      return NextResponse.json({ error: importError.message, episode: ep.episodeNumber }, { status: 500 });
     }
 
-    // Fetch members, assignments, wagers
-    const { data: members } = await supabase
-      .from("league_members")
-      .select("*")
-      .eq("league_id", league.id);
-
-    const memberIds = (members ?? []).map((m: any) => m.id);
-
-    const [{ data: assignments }, { data: wagers }] = await Promise.all([
-      supabase.from("team_assignments").select("*").in("member_id", memberIds),
-      rules.wagers_enabled
-        ? supabase.from("weekly_wagers")
-            .select("*")
-            .in("member_id", memberIds)
-            .eq("episode_number", latest.episodeNumber)
-        : Promise.resolve({ data: [], error: null } as any),
-    ]);
-
-    // Score castaways
-    const castawayDeltas = scoreEpisodeCastaways(
-      latest as EpisodeFacts,
-      (castaways ?? []) as Castaway[],
-      (members ?? []) as LeagueMember[],
-      (assignments ?? []) as TeamAssignment[],
-      rules.event_points
-    );
-
-    // Settle wagers
-    const wagerDeltas: MemberDelta[] = [];
-    for (const wager of wagers ?? []) {
-      const member = (members ?? []).find((m: any) => m.id === wager.member_id);
-      if (!member) continue;
-      const delta = settleWager({
-        member: member as LeagueMember,
-        wager: wager as WeeklyWager,
-        votedOutNames: latest.votedOutNames,
-        castaways: (castaways ?? []) as Castaway[],
-        winMultiplier: rules.extra_wager_win_multiplier,
-      });
-      wagerDeltas.push(delta);
-    }
-
-    // Merge deltas by member
-    const deltaMap = new Map<string, MemberDelta>();
-    for (const delta of [...castawayDeltas, ...wagerDeltas]) {
-      const existing = deltaMap.get(delta.memberId);
-      if (existing) {
-        existing.deltaCastawayPoints += delta.deltaCastawayPoints;
-        existing.deltaVotePoints += delta.deltaVotePoints;
-        existing.breakdown.push(...delta.breakdown);
-      } else {
-        deltaMap.set(delta.memberId, { ...delta, breakdown: [...delta.breakdown] });
+    // Mark voted-out castaways as eliminated
+    for (const name of ep.votedOutNames) {
+      const castaway = (castaways ?? []).find((c: any) => c.name.toLowerCase() === name.toLowerCase());
+      if (castaway && !castaway.is_eliminated) {
+        await supabase
+          .from("castaways")
+          .update({ is_eliminated: true, eliminated_episode: ep.episodeNumber })
+          .eq("id", castaway.id);
       }
     }
 
-    const mergedDeltas = Array.from(deltaMap.values());
-
-    // Upsert score draft
-    const isNewDraft = !existingDraft?.id;
-    const { error: draftError } = await supabase.from("score_drafts").upsert({
-      ...(existingDraft?.id ? { id: existingDraft.id } : {}),
-      league_id: league.id,
-      episode_import_id: importRow.id,
-      status: "pending",
-      deltas: mergedDeltas as any,
-      created_at: new Date().toISOString(),
-    }, { onConflict: "id" });
-
-    let email: { sent: boolean; reason?: string } = { sent: false, reason: "Not attempted" };
-    if (!draftError && isNewDraft) {
-      const { data: owners } = await supabase
-        .from("league_members")
-        .select("profiles(email)")
+    for (const league of leagues ?? []) {
+      const rules = parseLeagueRuleSet((league as any).rule_set);
+      // Skip if draft already exists for this import + league
+      const { data: existingDraft } = await supabase
+        .from("score_drafts")
+        .select("id, status")
         .eq("league_id", league.id)
-        .eq("role", "owner");
-      const recipientEmails = (owners ?? [])
-        .map((o: any) => o.profiles?.email as string | undefined)
-        .filter((e): e is string => Boolean(e));
-      try {
-        email = await sendDraftReadyEmail({
-          to: recipientEmails,
-          leagueName: (league as any).name ?? "Your league",
-          leagueId: league.id,
-          episodeNumber: latest.episodeNumber,
-        });
-      } catch (emailErr: any) {
-        console.error(`[import-episode-results] Email send failed for league ${league.id}:`, emailErr);
-        email = { sent: false, reason: emailErr?.message ?? "Email send threw" };
-      }
-    }
+        .eq("episode_import_id", importRow.id)
+        .maybeSingle();
 
-    results.push({
-      league_id: league.id,
-      error: draftError?.message,
-      deltas: mergedDeltas.length,
-      email,
-    });
+      if (existingDraft?.status === "approved") {
+        results.push({ episode: ep.episodeNumber, league_id: league.id, skipped: "already_approved" });
+        continue;
+      }
+
+      // Fetch members, assignments, wagers
+      const { data: members } = await supabase.from("league_members").select("*").eq("league_id", league.id);
+
+      const memberIds = (members ?? []).map((m: any) => m.id);
+
+      const [{ data: assignments }, { data: wagers }] = await Promise.all([
+        supabase.from("team_assignments").select("*").in("member_id", memberIds),
+        rules.wagers_enabled
+          ? supabase.from("weekly_wagers").select("*").in("member_id", memberIds).eq("episode_number", ep.episodeNumber)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
+
+      // Score castaways
+      const castawayDeltas = scoreEpisodeCastaways(
+        ep as EpisodeFacts,
+        (castaways ?? []) as Castaway[],
+        (members ?? []) as LeagueMember[],
+        (assignments ?? []) as TeamAssignment[],
+        rules.event_points
+      );
+
+      // Settle wagers
+      const wagerDeltas: MemberDelta[] = [];
+      for (const wager of wagers ?? []) {
+        const member = (members ?? []).find((m: any) => m.id === wager.member_id);
+        if (!member) continue;
+        const delta = settleWager({
+          member: member as LeagueMember,
+          wager: wager as WeeklyWager,
+          votedOutNames: ep.votedOutNames,
+          castaways: (castaways ?? []) as Castaway[],
+          winMultiplier: rules.extra_wager_win_multiplier,
+        });
+        wagerDeltas.push(delta);
+      }
+
+      // Merge deltas by member
+      const deltaMap = new Map<string, MemberDelta>();
+      for (const delta of [...castawayDeltas, ...wagerDeltas]) {
+        const existing = deltaMap.get(delta.memberId);
+        if (existing) {
+          existing.deltaCastawayPoints += delta.deltaCastawayPoints;
+          existing.deltaVotePoints += delta.deltaVotePoints;
+          existing.breakdown.push(...delta.breakdown);
+        } else {
+          deltaMap.set(delta.memberId, { ...delta, breakdown: [...delta.breakdown] });
+        }
+      }
+
+      const mergedDeltas = Array.from(deltaMap.values());
+
+      // Upsert score draft
+      const isNewDraft = !existingDraft?.id;
+      const { error: draftError } = await supabase
+        .from("score_drafts")
+        .upsert(
+          {
+            ...(existingDraft?.id ? { id: existingDraft.id } : {}),
+            league_id: league.id,
+            episode_import_id: importRow.id,
+            status: "pending",
+            deltas: mergedDeltas as any,
+            created_at: new Date().toISOString(),
+          },
+          { onConflict: "id" }
+        );
+
+      let email: { sent: boolean; reason?: string } = { sent: false, reason: "Not attempted" };
+      if (!draftError && isNewDraft) {
+        const { data: owners } = await supabase
+          .from("league_members")
+          .select("profiles(email)")
+          .eq("league_id", league.id)
+          .eq("role", "owner");
+        const recipientEmails = (owners ?? [])
+          .map((o: any) => o.profiles?.email as string | undefined)
+          .filter((e): e is string => Boolean(e));
+        try {
+          email = await sendDraftReadyEmail({
+            to: recipientEmails,
+            leagueName: (league as any).name ?? "Your league",
+            leagueId: league.id,
+            episodeNumber: ep.episodeNumber,
+          });
+        } catch (emailErr: any) {
+          console.error(`[import-episode-results] Email send failed for league ${league.id}:`, emailErr);
+          email = { sent: false, reason: emailErr?.message ?? "Email send threw" };
+        }
+      }
+
+      results.push({
+        episode: ep.episodeNumber,
+        league_id: league.id,
+        error: draftError?.message,
+        deltas: mergedDeltas.length,
+        email,
+      });
+    }
   }
 
-  return NextResponse.json({ episode: latest.episodeNumber, leagues: results.length, results });
+  return NextResponse.json({
+    importedEpisodes: sortedEpisodes.map((ep) => ep.episodeNumber),
+    resultsCount: results.length,
+    results,
+  });
 }
