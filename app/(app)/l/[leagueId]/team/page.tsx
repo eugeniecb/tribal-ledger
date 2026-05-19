@@ -30,12 +30,47 @@ export default async function TeamPage({ params }: Props) {
 
   const { data: league } = await supabase
     .from("leagues")
-    .select("assignment_locked_at")
+    .select("assignment_locked_at, season_id")
     .eq("id", leagueId)
     .single();
 
   const isAdmin = myMember.role === "owner";
   const canRunAssignment = isAdmin && !league?.assignment_locked_at;
+  let rankingStatus: { complete: boolean; expectedCount: number; incompleteMembers: string[] } | null = null;
+
+  if (isAdmin && league?.season_id) {
+    const [{ count: expectedCount }, { data: membersData }] = await Promise.all([
+      supabase
+        .from("castaways")
+        .select("*", { count: "exact", head: true })
+        .eq("season_id", league.season_id),
+      supabase
+        .from("league_members")
+        .select("id, profile_id, tribe_name, profiles(display_name)")
+        .eq("league_id", leagueId),
+    ]);
+
+    const expected = expectedCount ?? 0;
+    const memberIds = (membersData ?? []).map((member: any) => member.id);
+    const { data: rankingsData } = memberIds.length
+      ? await supabase.from("preference_rankings").select("member_id").in("member_id", memberIds)
+      : { data: [] as any[] };
+    const rankingCounts = new Map<string, number>();
+    for (const row of rankingsData ?? []) {
+      const memberId = (row as any).member_id as string;
+      rankingCounts.set(memberId, (rankingCounts.get(memberId) ?? 0) + 1);
+    }
+
+    const incompleteMembers = (membersData ?? [])
+      .filter((member: any) => (rankingCounts.get(member.id) ?? 0) < expected)
+      .map((member: any) => member.tribe_name ?? member.profiles?.display_name ?? member.profile_id ?? "Unknown member");
+
+    rankingStatus = {
+      complete: incompleteMembers.length === 0,
+      expectedCount: expected,
+      incompleteMembers,
+    };
+  }
 
   return (
     <div className="max-w-xl mx-auto px-6 py-10">
@@ -60,6 +95,26 @@ export default async function TeamPage({ params }: Props) {
         <p className="text-xs text-jungle-mid mb-6">
           Team assignments were finalized on {new Date(league.assignment_locked_at).toLocaleDateString()} and cannot be run again.
         </p>
+      )}
+      {isAdmin && rankingStatus && (
+        <div className="mb-6 rounded-xl border border-sand-dark bg-white p-4">
+          <p className="text-sm font-semibold text-jungle">
+            Ranking status: {rankingStatus.complete ? "Ready to run assignment" : "Waiting on rankings"}
+          </p>
+          <p className="text-xs text-jungle-mid mt-1">
+            Each member should submit {rankingStatus.expectedCount} ranked castaways.
+          </p>
+          {!rankingStatus.complete && (
+            <div className="mt-3">
+              <p className="text-xs font-medium text-jungle mb-1">Still missing rankings:</p>
+              <ul className="list-disc pl-5 text-xs text-jungle-mid space-y-0.5">
+                {rankingStatus.incompleteMembers.map((name) => (
+                  <li key={name}>{name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
 
       {!assignments || assignments.length === 0 ? (
