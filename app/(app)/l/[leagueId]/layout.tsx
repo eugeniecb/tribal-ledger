@@ -13,7 +13,7 @@ export default async function LeagueLayout({ children, params }: Props) {
   const supabase = await createUserClient();
   const { data: league } = await supabase
     .from("leagues")
-    .select("rule_set")
+    .select("rule_set, assignment_locked_at")
     .eq("id", leagueId)
     .single();
   const { data: myMember } = await supabase
@@ -27,10 +27,12 @@ export default async function LeagueLayout({ children, params }: Props) {
   const navLinks: { href: string; label: string; icon: any }[] = [
     { href: `/l/${leagueId}`, label: "Standings", icon: BarChart2 },
     { href: `/l/${leagueId}/team`, label: "Team", icon: Users },
-    { href: `/l/${leagueId}/rank`, label: "Rankings", icon: ListOrdered },
     { href: `/l/${leagueId}/rules`, label: "League Rules", icon: Scroll },
     { href: `/l/${leagueId}/recap`, label: "Recap", icon: ScrollText },
   ];
+  if (!league?.assignment_locked_at) {
+    navLinks.splice(2, 0, { href: `/l/${leagueId}/rank`, label: "Rankings", icon: ListOrdered });
+  }
   if (rules.wagers_enabled) navLinks.splice(3, 0, { href: `/l/${leagueId}/wager`, label: "Wager", icon: Zap });
   if (rules.sole_survivor_enabled) navLinks.splice(rules.wagers_enabled ? 4 : 3, 0, { href: `/l/${leagueId}/sole-survivor`, label: "Sole Survivor", icon: Star });
   if (isAdmin) navLinks.push({ href: `/l/${leagueId}/admin`, label: "Admin", icon: Shield });
