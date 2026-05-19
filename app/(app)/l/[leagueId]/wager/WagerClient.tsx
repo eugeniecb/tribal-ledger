@@ -33,9 +33,15 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
   const extraRemaining = availableVotePoints - extraTotal;
 
   function setAllocation(castawayId: string, value: string, pool: "budget" | "extra") {
-    const n = parseInt(value) || 0;
     const setter = pool === "budget" ? setBudget : setExtra;
-    setter((prev) => ({ ...prev, [castawayId]: Math.max(0, n) }));
+    setter((prev) => {
+      if (value.trim() === "") {
+        const { [castawayId]: _removed, ...rest } = prev;
+        return rest;
+      }
+      const n = parseInt(value, 10);
+      return { ...prev, [castawayId]: Math.max(0, Number.isFinite(n) ? n : 0) };
+    });
     setSaved(false);
   }
 
