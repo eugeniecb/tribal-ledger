@@ -100,10 +100,6 @@ export default async function TeamPage({ params }: Props) {
           })}
         </div>
       )}
-
-      <p className="text-xs text-jungle-mid mt-8">
-        Team assignment points: <strong>{myMember.castaway_points}</strong>
-      </p>
     </div>
   );
 }
