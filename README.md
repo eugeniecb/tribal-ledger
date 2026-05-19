@@ -115,3 +115,4 @@ npm run build
 - `proxy.ts` enforces auth on protected routes.
 - Service-role writes are restricted to server routes and key flows are enforced via ownership checks and SQL RPCs.
 - Cron import endpoint requires `CRON_SECRET` and fails closed if missing.
+- Profile reads are RLS-scoped to shared league membership, so standings/trash talk can show tribemate display names without exposing global profile data.

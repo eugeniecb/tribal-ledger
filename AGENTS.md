@@ -34,6 +34,7 @@ Stack: Next.js 16 App Router + TypeScript + Tailwind CSS v4 + Supabase Postgres 
 
 - Clerk auth with native Supabase third-party JWT integration.
 - Clerk JWTs are accepted by Supabase RLS; `auth.jwt()->>'sub'` is Clerk user id (text).
+- `profiles` read access is scoped by shared league membership so members can see each other's display names in league UIs.
 - `proxy.ts` protects app/api surfaces except explicitly public routes.
 - Cron endpoint requires `CRON_SECRET` and fails closed when missing.
 - Sensitive writes are enforced via SQL RPCs where possible (`approve_score_draft`, `archive_league`, `send_trash_talk`).

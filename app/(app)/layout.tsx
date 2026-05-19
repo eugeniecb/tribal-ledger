@@ -14,10 +14,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
         <div className="shrink-0 flex items-center gap-4 md:gap-6">
           <nav className="hidden md:flex items-center gap-4 text-sm text-jungle-mid">
-            <Link href="/dashboard" className="hover:text-torch transition-colors">Dashboard</Link>
             <Link href="/how-to-play" className="hover:text-torch transition-colors">How to Play</Link>
             <Link href="/rules" className="hover:text-torch transition-colors">Rules</Link>
             <Link href="/cast" className="hover:text-torch transition-colors">Cast</Link>
+            <Link href="/dashboard" className="hover:text-torch transition-colors">Dashboard</Link>
           </nav>
           <UserButton />
         </div>
