@@ -80,13 +80,18 @@ export function parseFSGHtml(html: string): EpisodeFacts[] {
       if (!eventMatch) {
         // Could be castaway name
         if (!SECTION_HEADERS.has(lower)) {
-          currentEpisode.votedOutNames!.push(line);
+          const votedOutName = normalizeVotedOutName(line);
+          if (!hasName(currentEpisode.votedOutNames!, votedOutName)) {
+            currentEpisode.votedOutNames!.push(votedOutName);
+          }
           // Also add as voted-out event
-          currentEpisode.events!.push({
-            castawayName: line,
-            eventKey: "voted out",
-            sourcePoints: 0,
-          });
+          if (!hasVotedOutEvent(currentEpisode.events!, votedOutName, "voted out")) {
+            currentEpisode.events!.push({
+              castawayName: votedOutName,
+              eventKey: "voted out",
+              sourcePoints: 0,
+            });
+          }
         }
       }
       continue;
@@ -94,12 +99,17 @@ export function parseFSGHtml(html: string): EpisodeFacts[] {
 
     if (currentSection === "quit_evac") {
       if (!eventMatch && !SECTION_HEADERS.has(lower)) {
-        currentEpisode.votedOutNames!.push(line);
-        currentEpisode.events!.push({
-          castawayName: line,
-          eventKey: "quit/evac",
-          sourcePoints: 0,
-        });
+        const votedOutName = normalizeVotedOutName(line);
+        if (!hasName(currentEpisode.votedOutNames!, votedOutName)) {
+          currentEpisode.votedOutNames!.push(votedOutName);
+        }
+        if (!hasVotedOutEvent(currentEpisode.events!, votedOutName, "quit/evac")) {
+          currentEpisode.events!.push({
+            castawayName: votedOutName,
+            eventKey: "quit/evac",
+            sourcePoints: 0,
+          });
+        }
       }
       continue;
     }
@@ -135,4 +145,21 @@ function finalize(ep: Partial<EpisodeFacts>): EpisodeFacts {
 
 function normalizeEventKey(raw: string): string {
   return raw.trim().toLowerCase();
+}
+
+function normalizeVotedOutName(raw: string): string {
+  // FSG sometimes repeats names with placement text like "Cirie (6th place)".
+  return raw.replace(/\s*\(\s*\d+(st|nd|rd|th)\s+place\s*\)\s*$/i, "").trim();
+}
+
+function hasName(names: string[], name: string): boolean {
+  return names.some((n) => n.toLowerCase() === name.toLowerCase());
+}
+
+function hasVotedOutEvent(events: CastawayEvent[], castawayName: string, eventKey: string): boolean {
+  return events.some(
+    (e) =>
+      e.eventKey === eventKey &&
+      e.castawayName.toLowerCase() === castawayName.toLowerCase()
+  );
 }
