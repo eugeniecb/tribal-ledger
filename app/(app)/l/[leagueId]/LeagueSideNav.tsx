@@ -2,18 +2,50 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  BarChart2,
+  Users,
+  ListOrdered,
+  Zap,
+  Star,
+  Shield,
+  ScrollText,
+  Scroll,
+} from "lucide-react";
+
+type IconKey =
+  | "standings"
+  | "team"
+  | "rankings"
+  | "wager"
+  | "sole_survivor"
+  | "admin"
+  | "recap"
+  | "rules";
 
 interface NavLink {
   href: string;
   label: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: IconKey;
 }
 
 export default function LeagueSideNav({ links }: { links: NavLink[] }) {
   const pathname = usePathname();
+  const iconMap = {
+    standings: BarChart2,
+    team: Users,
+    rankings: ListOrdered,
+    wager: Zap,
+    sole_survivor: Star,
+    admin: Shield,
+    recap: ScrollText,
+    rules: Scroll,
+  } as const;
+
   return (
     <nav className="flex md:flex-col gap-1 p-3 overflow-x-auto md:overflow-x-visible">
-      {links.map(({ href, label, icon: Icon }) => {
+      {links.map(({ href, label, icon }) => {
+        const Icon = iconMap[icon];
         const isActive = pathname === href || (href.endsWith("/latest") && pathname.startsWith(href.replace("/latest", "")));
         return (
           <Link

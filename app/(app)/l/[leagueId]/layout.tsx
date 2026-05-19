@@ -1,4 +1,3 @@
-import { BarChart2, Users, ListOrdered, Zap, Star, Shield, ScrollText, Scroll } from "lucide-react";
 import { createUserClient } from "@/lib/supabase/server";
 import { parseLeagueRuleSet } from "@/lib/rules";
 import LeagueSideNav from "./LeagueSideNav";
@@ -24,18 +23,18 @@ export default async function LeagueLayout({ children, params }: Props) {
   const rules = parseLeagueRuleSet((league as any)?.rule_set);
   const isAdmin = myMember?.role === "owner";
 
-  const navLinks: { href: string; label: string; icon: any }[] = [
-    { href: `/l/${leagueId}`, label: "Standings", icon: BarChart2 },
-    { href: `/l/${leagueId}/team`, label: "Team", icon: Users },
-    { href: `/l/${leagueId}/rules`, label: "League Rules", icon: Scroll },
-    { href: `/l/${leagueId}/recap`, label: "Recap", icon: ScrollText },
+  const navLinks: { href: string; label: string; icon: "standings" | "team" | "rankings" | "wager" | "sole_survivor" | "admin" | "recap" | "rules" }[] = [
+    { href: `/l/${leagueId}`, label: "Standings", icon: "standings" },
+    { href: `/l/${leagueId}/team`, label: "Team", icon: "team" },
+    { href: `/l/${leagueId}/rules`, label: "League Rules", icon: "rules" },
+    { href: `/l/${leagueId}/recap`, label: "Recap", icon: "recap" },
   ];
   if (!league?.assignment_locked_at) {
-    navLinks.splice(2, 0, { href: `/l/${leagueId}/rank`, label: "Rankings", icon: ListOrdered });
+    navLinks.splice(2, 0, { href: `/l/${leagueId}/rank`, label: "Rankings", icon: "rankings" });
   }
-  if (rules.wagers_enabled) navLinks.splice(3, 0, { href: `/l/${leagueId}/wager`, label: "Wager", icon: Zap });
-  if (rules.sole_survivor_enabled) navLinks.splice(rules.wagers_enabled ? 4 : 3, 0, { href: `/l/${leagueId}/sole-survivor`, label: "Sole Survivor", icon: Star });
-  if (isAdmin) navLinks.push({ href: `/l/${leagueId}/admin`, label: "Admin", icon: Shield });
+  if (rules.wagers_enabled) navLinks.splice(3, 0, { href: `/l/${leagueId}/wager`, label: "Wager", icon: "wager" });
+  if (rules.sole_survivor_enabled) navLinks.splice(rules.wagers_enabled ? 4 : 3, 0, { href: `/l/${leagueId}/sole-survivor`, label: "Sole Survivor", icon: "sole_survivor" });
+  if (isAdmin) navLinks.push({ href: `/l/${leagueId}/admin`, label: "Admin", icon: "admin" });
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-57px)]">
