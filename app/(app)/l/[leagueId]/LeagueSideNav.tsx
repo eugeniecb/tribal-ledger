@@ -52,10 +52,10 @@ export default function LeagueSideNav({ links }: { links: NavLink[] }) {
             key={href}
             href={href}
             className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap flex-shrink-0 ${
-              isActive ? "bg-torch text-white font-medium" : "text-sand/70 hover:bg-white/10 hover:text-sand"
+              isActive ? "bg-torch text-sand font-semibold" : "text-sand/90 hover:bg-white/15 hover:text-sand"
             }`}
           >
-            <Icon size={15} />
+            <Icon size={15} className="opacity-95" />
             {label}
           </Link>
         );

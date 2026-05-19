@@ -39,7 +39,7 @@ export default async function LeagueLayout({ children, params }: Props) {
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-57px)]">
       {/* Sidebar */}
-      <aside className="md:w-52 flex-shrink-0 bg-jungle border-b md:border-b-0 md:border-r border-jungle-mid/40">
+      <aside className="md:w-52 flex-shrink-0 bg-jungle text-sand border-b md:border-b-0 md:border-r border-jungle-mid/40">
         <LeagueSideNav links={navLinks} />
       </aside>
       <div className="flex-1 overflow-auto">{children}</div>
