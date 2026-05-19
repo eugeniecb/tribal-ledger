@@ -72,18 +72,20 @@ export default async function WagerPage({ params }: Props) {
   const season: any = (league as any).seasons;
   const lockWeekday = season?.episode_lock_weekday ?? 3;
   const lockHourET = season?.episode_lock_hour_et ?? 20;
-
-  // Calculate lock time for current week (next occurrence of lockWeekday at lockHourET ET)
-  const now = new Date();
-  const lockDateUTC = getNextWeekdayET(lockWeekday, lockHourET, now);
-  const isLocked = existingWager?.locked || now >= lockDateUTC;
+  const lockHourCT = (lockHourET + 23) % 24;
+  const lockWeekdayLabel = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][lockWeekday] ?? "Wednesday";
+  const lockHourLabel = to12Hour(lockHourCT);
+  const nowCt = getCtParts(new Date());
+  const isLocked = existingWager?.locked || (
+    nowCt.weekday > lockWeekday ||
+    (nowCt.weekday === lockWeekday &&
+      (nowCt.hour > lockHourCT || (nowCt.hour === lockHourCT && nowCt.minute >= 0)))
+  );
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
       <h1 className="text-3xl font-bold text-jungle mb-2">Episode {episodeNumber} Wager</h1>
-      <p className="text-jungle-mid text-sm mb-1">
-        Locks: {lockDateUTC.toLocaleString("en-US", { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" })}
-      </p>
+      <p className="text-jungle-mid text-sm mb-1">Locks: {lockWeekdayLabel} {lockHourLabel} CT</p>
       <p className="text-jungle-mid text-sm mb-8">
         Your available vote points: <strong>{myMember.vote_points}</strong>
       </p>
@@ -109,13 +111,40 @@ export default async function WagerPage({ params }: Props) {
   );
 }
 
-function getNextWeekdayET(weekday: number, hourET: number, from: Date): Date {
-  const ET_OFFSET = -5; // EST; todo: handle EDT -4 properly for production
-  const nowET = new Date(from.getTime() + (ET_OFFSET - (from.getTimezoneOffset() / 60)) * 3600000);
-  const target = new Date(nowET);
-  target.setHours(hourET, 0, 0, 0);
-  const diff = (weekday - nowET.getDay() + 7) % 7;
-  target.setDate(target.getDate() + (diff === 0 && nowET >= target ? 7 : diff));
-  // Convert back to UTC
-  return new Date(target.getTime() - ET_OFFSET * 3600000);
+function getCtParts(now: Date) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    weekday: "short",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(now);
+  const weekday = parts.find((p) => p.type === "weekday")?.value;
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+
+  const weekdayMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+
+  return {
+    weekday: weekday ? weekdayMap[weekday] : 0,
+    hour,
+    minute,
+  };
+}
+
+function to12Hour(hour24: number): string {
+  const h = ((hour24 % 24) + 24) % 24;
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${hour12}:00 ${suffix}`;
 }

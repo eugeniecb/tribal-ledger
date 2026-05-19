@@ -12,9 +12,9 @@ const schema = z.object({
   extra_wagers: z.record(z.string(), z.number().int().min(0)).default({}),
 });
 
-function getEtParts(now: Date) {
+function getCtParts(now: Date) {
   const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
+    timeZone: "America/Chicago",
     weekday: "short",
     hour: "numeric",
     minute: "numeric",
@@ -91,11 +91,12 @@ export async function POST(req: Request) {
   if (season) {
     const lockWeekday = season.episode_lock_weekday ?? 3;
     const lockHourET = season.episode_lock_hour_et ?? 20;
-    const nowEt = getEtParts(new Date());
+    const lockHourCT = (lockHourET + 23) % 24;
+    const nowCt = getCtParts(new Date());
     const isLocked =
-      nowEt.weekday > lockWeekday ||
-      (nowEt.weekday === lockWeekday &&
-        (nowEt.hour > lockHourET || (nowEt.hour === lockHourET && nowEt.minute >= 0)));
+      nowCt.weekday > lockWeekday ||
+      (nowCt.weekday === lockWeekday &&
+        (nowCt.hour > lockHourCT || (nowCt.hour === lockHourCT && nowCt.minute >= 0)));
     if (isLocked) {
       await supabase.from("weekly_wagers").update({ locked: true }).eq("member_id", member_id).eq("episode_number", episode_number);
       return NextResponse.json({ error: "Wagers are locked for this episode" }, { status: 409 });
