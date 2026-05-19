@@ -34,6 +34,20 @@ export default async function LeagueHomePage({ params }: Props) {
   const myMember = members?.find((m: any) => m.profile_id === userId);
   if (!myMember) notFound();
   const isAdmin = myMember?.role === "owner";
+  const memberIds = (members ?? []).map((m: any) => m.id);
+
+  const { data: soleSurvivorPicks } = memberIds.length
+    ? await supabase
+        .from("sole_survivor_picks")
+        .select("member_id, castaways(name)")
+        .in("member_id", memberIds)
+        .eq("active", true)
+    : { data: [] as any[] };
+
+  const soleSurvivorByMember = new Map<string, string>();
+  for (const pick of soleSurvivorPicks ?? []) {
+    soleSurvivorByMember.set((pick as any).member_id, (pick as any).castaways?.name ?? "—");
+  }
 
   let trashTalkBanner:
     | {
@@ -112,6 +126,7 @@ export default async function LeagueHomePage({ params }: Props) {
                 <th className="text-left px-4 py-2.5 text-jungle font-medium">Player</th>
                 <th className="text-right px-4 py-2.5 text-jungle font-medium">Cast Pts</th>
                 <th className="text-right px-4 py-2.5 text-jungle font-medium">Vote Pts</th>
+                <th className="text-left px-4 py-2.5 text-jungle font-medium">Sole Survivor</th>
                 <th className="text-right px-4 py-2.5 text-jungle font-medium">Total</th>
                 <th className="text-right px-4 py-2.5 text-jungle font-medium">Actions</th>
               </tr>
@@ -133,6 +148,7 @@ export default async function LeagueHomePage({ params }: Props) {
                     </td>
                     <td className="px-4 py-3 text-right text-jungle-mid">{member.castaway_points}</td>
                     <td className="px-4 py-3 text-right text-jungle-mid">{member.vote_points}</td>
+                    <td className="px-4 py-3 text-jungle-mid">{soleSurvivorByMember.get(member.id) ?? "—"}</td>
                     <td className="px-4 py-3 text-right font-bold text-jungle">{member.castaway_points + member.vote_points}</td>
                     <td className="px-4 py-3">
                       {!isMe ? (
