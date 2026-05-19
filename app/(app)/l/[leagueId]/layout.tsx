@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { BarChart2, Users, ListOrdered, Zap, Star, Shield, ScrollText, Scroll } from "lucide-react";
 import { createUserClient } from "@/lib/supabase/server";
 import { parseLeagueRuleSet } from "@/lib/rules";
+import LeagueSideNav from "./LeagueSideNav";
 
 interface Props {
   children: React.ReactNode;
@@ -40,19 +40,8 @@ export default async function LeagueLayout({ children, params }: Props) {
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-57px)]">
       {/* Sidebar */}
-      <aside className="md:w-52 flex-shrink-0 bg-white border-b md:border-b-0 md:border-r border-sand-dark">
-        <nav className="flex md:flex-col gap-1 p-3 overflow-x-auto md:overflow-x-visible">
-          {navLinks.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-jungle-mid hover:bg-sand hover:text-jungle transition-colors whitespace-nowrap flex-shrink-0"
-            >
-              <Icon size={15} />
-              {label}
-            </Link>
-          ))}
-        </nav>
+      <aside className="md:w-52 flex-shrink-0 bg-jungle border-b md:border-b-0 md:border-r border-jungle-mid/40">
+        <LeagueSideNav links={navLinks} />
       </aside>
       <div className="flex-1 overflow-auto">{children}</div>
     </div>

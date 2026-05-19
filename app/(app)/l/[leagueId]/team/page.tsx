@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { createUserClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Shuffle } from "lucide-react";
+import { Shuffle, Flame } from "lucide-react";
 
 interface Props {
   params: Promise<{ leagueId: string }>;
@@ -76,6 +76,7 @@ export default async function TeamPage({ params }: Props) {
     <div className="max-w-xl mx-auto px-6 py-10">
       <div className="flex items-center justify-between mb-8">
         <div>
+          {isAdmin && <p className="text-xs font-semibold text-jungle-mid uppercase tracking-widest mb-1">Your Castaways</p>}
           <h1 className="text-3xl font-bold text-jungle">My Team</h1>
           <p className="text-jungle-mid mt-1 text-sm">Your 2 assigned castaways</p>
         </div>
@@ -119,6 +120,7 @@ export default async function TeamPage({ params }: Props) {
 
       {!assignments || assignments.length === 0 ? (
         <div className="text-center py-16 bg-sand rounded-xl border border-sand-dark text-jungle-mid">
+          <Flame size={36} className="mx-auto mb-3 text-torch opacity-40" />
           <p className="font-medium mb-1">No team assigned yet</p>
           <p className="text-sm mb-4">The league admin will run the team assignment after everyone has ranked their castaways.</p>
           <Link href={`/l/${leagueId}/rank`} className="text-torch underline text-sm">
@@ -129,9 +131,15 @@ export default async function TeamPage({ params }: Props) {
         <div className="grid grid-cols-2 gap-6">
           {(assignments as any[]).map((a) => {
             const c = a.castaways;
+            const eliminated = Boolean(c.is_eliminated);
             return (
-              <div key={a.slot} className={`rounded-xl border border-sand-dark overflow-hidden bg-white ${c.is_eliminated ? "opacity-60" : ""}`}>
-                <div className="aspect-square bg-sand-dark relative">
+              <div
+                key={a.slot}
+                className={`rounded-2xl border-2 shadow-md overflow-hidden bg-white ${
+                  eliminated ? "border-sand-dark opacity-60" : "border-jungle"
+                }`}
+              >
+                <div className="aspect-[3/4] bg-sand-dark relative">
                   {c.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={c.image_url} alt={c.name} className="w-full h-full object-cover object-[50%_20%]" />
@@ -140,14 +148,15 @@ export default async function TeamPage({ params }: Props) {
                       {c.name[0]}
                     </div>
                   )}
-                  {c.is_eliminated && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                      <span className="text-white text-sm font-semibold bg-torch px-3 py-1 rounded">Voted Out</span>
+                  {!eliminated && <div className="absolute inset-0 bg-gradient-to-t from-jungle/60 via-transparent to-transparent" />}
+                  {eliminated && (
+                    <div className="absolute inset-0 flex items-end justify-center pb-4 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
+                      <span className="text-white text-xs font-semibold uppercase tracking-wide bg-torch px-3 py-1 rounded-full">Voted Out</span>
                     </div>
                   )}
                 </div>
-                <div className="p-4 text-center">
-                  <p className="font-bold text-jungle text-lg">{c.name}</p>
+                <div className={`p-4 text-center ${eliminated ? "bg-sand/50" : "bg-jungle"}`}>
+                  <p className={`text-lg font-bold ${eliminated ? "text-jungle-mid line-through" : "text-sand"}`}>{c.name}</p>
                   {c.tribe && <p className="text-xs text-jungle-mid mt-0.5">{c.tribe}</p>}
                 </div>
               </div>
@@ -155,6 +164,11 @@ export default async function TeamPage({ params }: Props) {
           })}
         </div>
       )}
+
+      <p className="mt-8 text-sm text-jungle-mid flex items-center gap-1.5">
+        <Flame size={14} className="text-torch" />
+        Team points: <strong className="text-jungle">{myMember.castaway_points}</strong>
+      </p>
     </div>
   );
 }

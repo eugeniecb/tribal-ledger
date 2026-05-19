@@ -1,6 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
-import { Plus, LogIn, Trophy } from "lucide-react";
+import { Plus, LogIn, Flame, ChevronRight } from "lucide-react";
 import { createUserClient } from "@/lib/supabase/server";
 import ArchiveLeagueButton from "./ArchiveLeagueButton";
 
@@ -65,26 +65,41 @@ export default async function DashboardPage() {
       <div className="grid gap-4 mb-8">
         {activeLeagues.length === 0 && !error ? (
           <div className="text-center py-16 bg-sand rounded-xl border border-sand-dark text-jungle-mid">
-            <Trophy size={32} className="mx-auto mb-3 text-torch opacity-50" />
+            <Flame size={36} className="mx-auto mb-3 text-torch opacity-40" />
             <p className="font-medium mb-1">No active leagues</p>
             <p className="text-sm">Create a new league or join one with an invite code.</p>
           </div>
         ) : (
           activeLeagues.map((league) => (
-            <div key={league.id} className="block bg-white border border-sand-dark rounded-xl p-5">
-              <div className="flex items-center justify-between gap-4">
-                <Link href={`/l/${league.id}`} className="group min-w-0">
-                  <h2 className="font-semibold text-jungle text-lg group-hover:text-torch transition-colors">{league.name}</h2>
-                  <p className="text-xs text-jungle-mid mt-0.5">Code: <code className="bg-sand px-1 rounded">{league.invite_code}</code></p>
-                </Link>
-                <div className="text-right shrink-0">
-                  <p className="text-2xl font-bold text-jungle">{league.castaway_points + league.vote_points}</p>
-                  <p className="text-xs text-jungle-mid">total pts</p>
+            <div key={league.id} className="bg-white border border-sand-dark rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <div className="flex items-stretch">
+                <div className="w-24 bg-jungle flex flex-col items-center justify-center shrink-0">
+                  <p className="text-3xl font-bold text-sand">{league.castaway_points + league.vote_points}</p>
+                  <p className="text-xs text-sand/60 uppercase tracking-wide">pts</p>
+                </div>
+                <div className="p-5 flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link href={`/l/${league.id}`} className="group min-w-0">
+                        <h2 className="font-semibold text-jungle text-lg group-hover:text-torch transition-colors truncate">{league.name}</h2>
+                      </Link>
+                      <p className="text-xs text-jungle-mid mt-0.5">
+                        Code: <code className="bg-sand px-1.5 py-0.5 rounded font-mono tracking-widest">{league.invite_code}</code>
+                      </p>
+                      <p className="text-xs text-jungle-mid mt-1">Cast {league.castaway_points} • Vote {league.vote_points}</p>
+                      {league.role === "owner" && (
+                        <p className="mt-2 text-ember font-semibold uppercase tracking-wide text-xs">Admin</p>
+                      )}
+                    </div>
+                    <ChevronRight size={18} className="text-jungle-mid shrink-0 mt-1" />
+                  </div>
                 </div>
               </div>
-              {league.role === "owner" && (
-                <ArchiveLeagueButton leagueId={league.id} leagueName={league.name} />
-              )}
+              <div className="px-5 pb-4">
+                {league.role === "owner" && (
+                  <ArchiveLeagueButton leagueId={league.id} leagueName={league.name} />
+                )}
+              </div>
             </div>
           ))
         )}

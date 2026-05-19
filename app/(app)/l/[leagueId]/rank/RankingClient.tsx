@@ -32,6 +32,12 @@ interface Props {
   leagueId: string;
 }
 
+const RANK_BADGE: Record<number, string> = {
+  1: "bg-ember text-white",
+  2: "bg-jungle-mid text-sand",
+  3: "bg-ember/60 text-jungle",
+};
+
 export default function RankingClient({ initialOrder, memberId, leagueId }: Props) {
   const [items, setItems] = useState(initialOrder);
   const [saving, setSaving] = useState(false);
@@ -91,7 +97,7 @@ export default function RankingClient({ initialOrder, memberId, leagueId }: Prop
       <button
         onClick={handleSave}
         disabled={saving}
-        className="flex items-center gap-2 bg-torch text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-torch-dark disabled:opacity-50 transition-colors"
+        className="flex items-center gap-2 bg-torch text-white px-6 py-2.5 rounded-xl font-bold shadow-sm hover:bg-torch-dark disabled:opacity-50 transition-colors"
       >
         {saved ? <><Check size={15} /> Saved</> : saving ? "Saving…" : "Save Rankings"}
       </button>
@@ -112,13 +118,15 @@ function SortableItem({ castaway, rank }: { castaway: Castaway; rank: number }) 
     <li
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 bg-white border border-sand-dark rounded-lg px-4 py-3 ${castaway.is_eliminated ? "opacity-50" : ""}`}
+      className={`flex items-center gap-3 bg-white border border-sand-dark rounded-xl px-4 py-3 ${castaway.is_eliminated ? "opacity-50" : "hover:border-jungle-mid/50"}`}
     >
       <button {...attributes} {...listeners} className="cursor-grab text-jungle-mid hover:text-jungle touch-none">
         <GripVertical size={18} />
       </button>
-      <span className="w-7 text-right text-sm font-mono text-jungle-mid flex-shrink-0">{rank}.</span>
-      <div className="w-8 h-8 rounded-full bg-sand-dark overflow-hidden flex-shrink-0">
+      <span className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold flex-shrink-0 ${RANK_BADGE[rank] ?? "bg-sand text-jungle-mid"}`}>
+        {rank}
+      </span>
+      <div className="w-8 h-8 rounded-full bg-sand-dark overflow-hidden flex-shrink-0 ring-2 ring-sand-dark">
         {castaway.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={castaway.image_url} alt={castaway.name} className="w-full h-full object-cover object-[50%_20%]" />
@@ -131,6 +139,11 @@ function SortableItem({ castaway, rank }: { castaway: Castaway; rank: number }) 
       <span className={`text-sm font-medium ${castaway.is_eliminated ? "line-through text-jungle-mid" : "text-jungle"}`}>
         {castaway.name}
       </span>
+      {castaway.is_eliminated && (
+        <span className="text-xs bg-sand px-2 py-0.5 rounded-full text-jungle-mid font-medium">
+          Voted out
+        </span>
+      )}
       {castaway.tribe && <span className="text-xs text-jungle-mid ml-auto">{castaway.tribe}</span>}
     </li>
   );

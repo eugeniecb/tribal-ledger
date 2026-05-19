@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { createUserClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Zap } from "lucide-react";
+import { Zap, Flame } from "lucide-react";
 import CopyButton from "./CopyButton";
 import TrashTalkButton from "./TrashTalkButton";
 import TrashTalkBanner from "./TrashTalkBanner";
@@ -10,6 +10,12 @@ import TrashTalkBanner from "./TrashTalkBanner";
 interface Props {
   params: Promise<{ leagueId: string }>;
 }
+
+const RANK_STYLES = [
+  "bg-ember text-white",
+  "bg-jungle-mid text-sand",
+  "bg-ember/60 text-jungle",
+] as const;
 
 export default async function LeagueHomePage({ params }: Props) {
   const { leagueId } = await params;
@@ -86,6 +92,7 @@ export default async function LeagueHomePage({ params }: Props) {
     if (totalB !== totalA) return totalB - totalA;
     return b.castaway_points - a.castaway_points;
   });
+  const myRank = sorted.findIndex((m: any) => m.profile_id === userId) + 1;
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
@@ -99,6 +106,17 @@ export default async function LeagueHomePage({ params }: Props) {
             </code>
             <CopyButton code={league.invite_code} />
           </div>
+          {myRank > 0 && (
+            <div className="mt-2">
+              <span
+                className={`inline-flex items-center justify-center min-w-7 h-7 px-2 rounded-full text-xs font-bold ${
+                  myRank <= 3 ? RANK_STYLES[myRank - 1] : "bg-sand text-jungle-mid"
+                }`}
+              >
+                #{myRank}
+              </span>
+            </div>
+          )}
         </div>
         {isAdmin && (
           <Link href={`/l/${leagueId}/admin`} className="text-sm text-torch underline">
@@ -121,24 +139,31 @@ export default async function LeagueHomePage({ params }: Props) {
         <h2 className="text-lg font-semibold text-jungle mb-4">Standings</h2>
         <div className="rounded-xl border border-sand-dark overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-sand border-b border-sand-dark">
+            <thead className="bg-jungle border-b border-jungle-mid/40 text-sand/70 text-xs uppercase tracking-wide">
               <tr>
-                <th className="text-left px-4 py-2.5 text-jungle font-medium w-8">#</th>
-                <th className="text-left px-4 py-2.5 text-jungle font-medium">Player</th>
-                <th className="text-right px-4 py-2.5 text-jungle font-medium">Cast Pts</th>
-                <th className="text-right px-4 py-2.5 text-jungle font-medium">Vote Pts</th>
-                <th className="text-left px-4 py-2.5 text-jungle font-medium">Sole Survivor</th>
-                <th className="text-right px-4 py-2.5 text-jungle font-medium">Total</th>
-                <th className="text-right px-4 py-2.5 text-jungle font-medium">Actions</th>
+                <th className="text-left px-4 py-2.5 font-medium w-8">#</th>
+                <th className="text-left px-4 py-2.5 font-medium">Player</th>
+                <th className="text-right px-4 py-2.5 font-medium">Cast Pts</th>
+                <th className="text-right px-4 py-2.5 font-medium">Vote Pts</th>
+                <th className="text-left px-4 py-2.5 font-medium">Sole Survivor</th>
+                <th className="text-right px-4 py-2.5 font-medium">Total</th>
+                <th className="text-right px-4 py-2.5 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {sorted.map((member: any, i: number) => {
                 const isMe = member.profile_id === userId;
                 return (
-                  <tr key={member.id} className={`border-b border-sand-dark last:border-0 ${isMe ? "bg-sand/60" : "bg-white hover:bg-sand/40"}`}>
-                    <td className="px-4 py-3 text-jungle-mid">{i + 1}</td>
+                  <tr key={member.id} className={`border-b border-sand-dark last:border-0 ${isMe ? "bg-torch/5" : "bg-white hover:bg-sand/40"}`}>
+                    <td className="px-4 py-3">
+                      {i < 3 ? (
+                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${RANK_STYLES[i]}`}>{i + 1}</span>
+                      ) : (
+                        <span className="text-jungle-mid text-xs">{i + 1}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-medium text-jungle">
+                      {i === 0 && <Flame size={13} className="text-torch inline-block mr-1.5" />}
                       {member.tribe_name ?? member.profiles?.display_name ?? "—"}
                       {member.tribe_name && (
                         <span className="ml-1.5 font-normal text-jungle-mid">
@@ -150,7 +175,7 @@ export default async function LeagueHomePage({ params }: Props) {
                     <td className="px-4 py-3 text-right text-jungle-mid">{member.castaway_points}</td>
                     <td className="px-4 py-3 text-right text-jungle-mid">{member.vote_points}</td>
                     <td className="px-4 py-3 text-jungle-mid">{soleSurvivorByMember.get(member.id) ?? "—"}</td>
-                    <td className="px-4 py-3 text-right font-bold text-jungle">{member.castaway_points + member.vote_points}</td>
+                    <td className="px-4 py-3 text-right font-bold text-jungle text-base">{member.castaway_points + member.vote_points}</td>
                     <td className="px-4 py-3">
                       {!isMe ? (
                         <TrashTalkButton

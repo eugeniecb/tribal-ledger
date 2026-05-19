@@ -53,9 +53,9 @@ export default async function RankPage({ params }: Props) {
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
-      <h1 className="text-3xl font-bold text-jungle mb-2">Castaway Rankings</h1>
+      <h1 className="text-3xl font-bold text-jungle mb-2">Rank Your Tribe</h1>
       <p className="text-jungle-mid text-sm mb-8">
-        Drag to rank castaways by preference. The algorithm uses this to assign your 2-castaway team. Save when done.
+        Drag castaways into your preferred order. The assignment algorithm uses this to build your 2-person team.
       </p>
       <RankingClient
         initialOrder={initialOrder as any[]}

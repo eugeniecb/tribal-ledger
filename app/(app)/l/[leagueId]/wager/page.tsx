@@ -3,6 +3,7 @@ import { createUserClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import WagerClient from "./WagerClient";
 import { parseLeagueRuleSet } from "@/lib/rules";
+import { Lock } from "lucide-react";
 
 interface Props {
   params: Promise<{ leagueId: string }>;
@@ -75,6 +76,7 @@ export default async function WagerPage({ params }: Props) {
   const lockHourCT = (lockHourET + 23) % 24;
   const lockWeekdayLabel = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][lockWeekday] ?? "Wednesday";
   const lockHourLabel = to12Hour(lockHourCT);
+  const lockLabel = `${lockWeekdayLabel} ${lockHourLabel} CT`;
   const nowCt = getCtParts(new Date());
   const isLocked = existingWager?.locked || (
     nowCt.weekday > lockWeekday ||
@@ -84,15 +86,23 @@ export default async function WagerPage({ params }: Props) {
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
-      <h1 className="text-3xl font-bold text-jungle mb-2">Episode {episodeNumber} Wager</h1>
-      <p className="text-jungle-mid text-sm mb-1">Locks: {lockWeekdayLabel} {lockHourLabel} CT</p>
+      <p className="text-xs font-semibold text-torch uppercase tracking-widest mb-1">Episode {episodeNumber}</p>
+      <h1 className="text-3xl font-bold text-jungle">Place Your Wager</h1>
+      <p className="text-jungle-mid text-sm mt-1">Predict who gets voted out. Risk your earned points for a bigger payoff.</p>
+      <p className="text-xs text-jungle-mid mt-2 flex items-center gap-1.5"><Lock size={11} /> Locks {lockLabel}</p>
       <p className="text-jungle-mid text-sm mb-8">
         Your available vote points: <strong>{myMember.vote_points}</strong>
       </p>
 
       {isLocked ? (
-        <div className="p-4 bg-sand rounded-xl border border-sand-dark text-jungle-mid text-sm">
-          Wagers are locked for this episode.
+        <div className="p-5 bg-jungle/5 border-2 border-jungle/20 rounded-2xl text-jungle-mid text-sm">
+          <div className="flex items-start gap-2.5">
+            <Lock size={16} className="text-jungle mt-0.5" />
+            <div>
+              <p className="font-bold text-jungle">Wagers locked</p>
+              <p className="mt-0.5">Wagers are locked for this episode.</p>
+            </div>
+          </div>
           {existingWager && (
             <p className="mt-2 font-medium text-jungle">Your submitted wager is locked in.</p>
           )}
