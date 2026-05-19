@@ -49,35 +49,35 @@ export default async function LeagueHomePage({ params }: Props) {
     soleSurvivorByMember.set((pick as any).member_id, (pick as any).castaways?.name ?? "—");
   }
 
-  let trashTalkBanner:
-    | {
-        messageId: string;
-        senderName: string;
-        message: string;
-      }
-    | null = null;
+  let trashTalkBanners: {
+    messageId: string;
+    senderName: string;
+    message: string;
+  }[] = [];
   const { data: pendingMessages, error: trashTalkError } = await supabase
     .from("trash_talk_messages")
     .select("id, message, sender_member_id")
     .eq("league_id", leagueId)
     .eq("recipient_member_id", myMember.id)
     .is("dismissed_at", null)
-    .order("created_at", { ascending: false })
-    .limit(1);
+    .order("created_at", { ascending: false });
 
-  if (!trashTalkError && pendingMessages?.[0]) {
-    const latest = pendingMessages[0] as any;
-    const { data: sender } = await supabase
+  if (!trashTalkError && pendingMessages?.length) {
+    const senderIds = Array.from(new Set((pendingMessages as any[]).map((m: any) => m.sender_member_id)));
+    const { data: senders } = await supabase
       .from("league_members")
-      .select("tribe_name, profile_id, profiles(display_name)")
-      .eq("id", latest.sender_member_id)
-      .maybeSingle();
+      .select("id, tribe_name, profile_id, profiles(display_name)")
+      .in("id", senderIds);
+    const senderById = new Map<string, any>((senders ?? []).map((s: any) => [s.id, s]));
 
-    trashTalkBanner = {
-      messageId: latest.id,
-      senderName: (sender as any)?.tribe_name ?? (sender as any)?.profiles?.display_name ?? (sender as any)?.profile_id ?? "A tribemate",
-      message: latest.message,
-    };
+    trashTalkBanners = (pendingMessages as any[]).map((msg: any) => {
+      const sender = senderById.get(msg.sender_member_id);
+      return {
+        messageId: msg.id,
+        senderName: sender?.tribe_name ?? sender?.profiles?.display_name ?? sender?.profile_id ?? "A tribemate",
+        message: msg.message,
+      };
+    });
   }
 
   const sorted = (members ?? []).slice().sort((a: any, b: any) => {
@@ -107,13 +107,14 @@ export default async function LeagueHomePage({ params }: Props) {
         )}
       </div>
 
-      {trashTalkBanner && (
+      {trashTalkBanners.map((banner) => (
         <TrashTalkBanner
-          messageId={trashTalkBanner.messageId}
-          senderName={trashTalkBanner.senderName}
-          message={trashTalkBanner.message}
+          key={banner.messageId}
+          messageId={banner.messageId}
+          senderName={banner.senderName}
+          message={banner.message}
         />
-      )}
+      ))}
 
       {/* Standings */}
       <section>
