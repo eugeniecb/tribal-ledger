@@ -228,27 +228,27 @@ export default async function LeagueHomePage({ params }: Props) {
 function TeamChips({ team }: { team: { id: string; name: string; image_url: string | null; is_eliminated: boolean }[] }) {
   if (!team.length) return <span className="text-xs text-jungle-mid/70">Team TBD</span>;
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-4">
       {team.map((c) => (
         <div
           key={c.id}
           title={c.is_eliminated ? `${c.name} (voted out)` : c.name}
-          className={`flex w-14 flex-col items-center gap-1 text-center ${c.is_eliminated ? "opacity-60" : ""}`}
+          className={`flex w-20 flex-col items-center gap-1.5 text-center ${c.is_eliminated ? "opacity-60" : ""}`}
         >
           {c.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={c.image_url}
               alt=""
-              className={`h-12 w-12 rounded-full border-2 border-sand-dark object-cover object-[50%_20%] ${c.is_eliminated ? "grayscale" : ""}`}
+              className={`h-20 w-20 rounded-full border-[3px] border-sand-dark object-cover object-[50%_20%] ${c.is_eliminated ? "grayscale" : ""}`}
             />
           ) : (
-            <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-sand-dark bg-sand text-sm font-bold text-jungle-mid">
+            <span className="flex h-20 w-20 items-center justify-center rounded-full border-[3px] border-sand-dark bg-sand text-xl font-bold text-jungle-mid">
               {c.name[0]}
             </span>
           )}
           <span
-            className={`w-full truncate text-[11px] font-bold uppercase tracking-wide ${
+            className={`w-full truncate text-xs font-bold uppercase tracking-wide ${
               c.is_eliminated ? "text-jungle-mid line-through" : "text-jungle"
             }`}
           >
