@@ -1,21 +1,21 @@
 import { load } from "cheerio";
 import type { EpisodeFacts, CastawayEvent } from "./types";
 
-// Patterns for castaway event lines: "Event Name (2)" or "Event Name"
-const EVENT_LINE_RE = /^(.+?)\s*\((\d+)\)\s*$/;
+// FSG event titles -> league scoring rule keys (see lib/rules.ts event_points).
+// Titles not listed here keep their lowercased FSG title as the key.
+const FSG_EVENT_KEYS: Record<string, string> = {
+  "win an individual immunity challenge": "individual immunity",
+  "win a tribe immunity challenge": "tribe immunity",
+  "win an individual reward challenge": "individual reward",
+  "win a tribe reward challenge": "tribe reward",
+  "gain an immunity idol": "gain immunity idol",
+  "gain an advantage": "gain advantage",
+  "voted out": "voted out",
+  "quit/evac": "quit/evac",
+};
 
-// Known FSG section headers that signal a new section (not an event)
-const SECTION_HEADERS = new Set([
-  "voted out",
-  "immunity",
-  "reward",
-  "journey",
-  "quit/evac",
-  "quit",
-  "evac",
-  "medical evacuation",
-  "merged",
-]);
+// Events that remove a castaway from the game mid-season.
+const ELIMINATION_KEYS = new Set(["voted out", "quit/evac"]);
 
 export async function fetchAndParseFSG(url: string): Promise<EpisodeFacts[]> {
   const res = await fetch(url, {
@@ -27,136 +27,59 @@ export async function fetchAndParseFSG(url: string): Promise<EpisodeFacts[]> {
   return parseFSGHtml(html);
 }
 
+// FSG recap pages have one block per episode: an `h5.recap-episode` header ("Episode N"),
+// summary boxes (tribe-level, ignored), then a <dl> where each <dt> is an event title with
+// its points and the following <dd> lists every castaway who earned it.
+// Only these blocks are read, so page chrome (nav, footer, scripts) can't leak in.
 export function parseFSGHtml(html: string): EpisodeFacts[] {
   const $ = load(html);
   const episodes: EpisodeFacts[] = [];
 
-  // FSG recap pages list episodes sequentially; each episode block starts with "Episode N"
-  // Strategy: collect all visible text, split by episode markers
-  const fullText = $("body").text();
-  const lines = fullText
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
+  $("h5.recap-episode").each((_, header) => {
+    const episodeMatch = $(header).text().trim().match(/^Episode\s+(\d+)$/i);
+    if (!episodeMatch) return;
 
-  let currentEpisode: Partial<EpisodeFacts> | null = null;
-  let currentSection: string | null = null;
-  let currentCastaway: string | null = null;
+    const episode: EpisodeFacts = {
+      episodeNumber: parseInt(episodeMatch[1], 10),
+      votedOutNames: [],
+      events: [],
+    };
 
-  for (const line of lines) {
-    // Episode header: "Episode 1", "Episode 12" etc.
-    const episodeMatch = line.match(/^Episode\s+(\d+)$/i);
-    if (episodeMatch) {
-      if (currentEpisode?.episodeNumber !== undefined) {
-        episodes.push(finalize(currentEpisode));
-      }
-      currentEpisode = { episodeNumber: parseInt(episodeMatch[1], 10), votedOutNames: [], events: [] };
-      currentSection = null;
-      currentCastaway = null;
-      continue;
-    }
+    const block = $(header).closest(".position-relative").nextUntil(":has(h5.recap-episode)");
+    block.find("dt").each((_, dt) => {
+      const $dt = $(dt);
+      const pointsText = $dt.find(".points").text().match(/-?\d+/)?.[0];
+      const title = $dt.clone().children(".points").remove().end().text().trim();
+      if (!title) return;
 
-    if (!currentEpisode) continue;
+      const eventKey = FSG_EVENT_KEYS[title.toLowerCase()] ?? title.toLowerCase();
+      const sourcePoints = pointsText ? parseInt(pointsText, 10) : 0;
 
-    // Section: "Voted Out", "Immunity", "Reward", "Journey", "Quit/Evac"
-    const lower = line.toLowerCase();
-    if (lower === "voted out") { currentSection = "voted_out"; currentCastaway = null; continue; }
-    if (lower === "immunity") { currentSection = "immunity"; currentCastaway = null; continue; }
-    if (lower === "reward") { currentSection = "reward"; currentCastaway = null; continue; }
-    if (lower === "journey") { currentSection = "journey"; currentCastaway = null; continue; }
-    if (lower === "quit/evac" || lower === "quit" || lower === "evac" || lower === "medical evacuation") {
-      currentSection = "quit_evac"; currentCastaway = null; continue;
-    }
-    if (lower === "merged" || lower === "merge") {
-      // Record merge as an event for all living castaways — handled downstream; just skip line
-      currentSection = null; continue;
-    }
+      const $dd = $dt.nextAll("dd").first();
+      $dd.find(".survivorname").each((_, el) => {
+        const castawayName = $(el).text().trim();
+        if (!castawayName) return;
 
-    // Event line under a section: castaway name or "Event (pts)"
-    const eventMatch = line.match(EVENT_LINE_RE);
-
-    if (currentSection === "voted_out") {
-      // Lines in Voted Out are castaway names
-      if (!eventMatch) {
-        // Could be castaway name
-        if (!SECTION_HEADERS.has(lower)) {
-          const votedOutName = normalizeVotedOutName(line);
-          if (!hasName(currentEpisode.votedOutNames!, votedOutName)) {
-            currentEpisode.votedOutNames!.push(votedOutName);
-          }
-          // Also add as voted-out event
-          if (!hasVotedOutEvent(currentEpisode.events!, votedOutName, "voted out")) {
-            currentEpisode.events!.push({
-              castawayName: votedOutName,
-              eventKey: "voted out",
-              sourcePoints: 0,
-            });
-          }
+        if (!hasEvent(episode.events, castawayName, eventKey)) {
+          episode.events.push({ castawayName, eventKey, sourcePoints });
         }
-      }
-      continue;
-    }
-
-    if (currentSection === "quit_evac") {
-      if (!eventMatch && !SECTION_HEADERS.has(lower)) {
-        const votedOutName = normalizeVotedOutName(line);
-        if (!hasName(currentEpisode.votedOutNames!, votedOutName)) {
-          currentEpisode.votedOutNames!.push(votedOutName);
+        if (ELIMINATION_KEYS.has(eventKey) && !hasName(episode.votedOutNames, castawayName)) {
+          episode.votedOutNames.push(castawayName);
         }
-        if (!hasVotedOutEvent(currentEpisode.events!, votedOutName, "quit/evac")) {
-          currentEpisode.events!.push({
-            castawayName: votedOutName,
-            eventKey: "quit/evac",
-            sourcePoints: 0,
-          });
-        }
-      }
-      continue;
-    }
+      });
+    });
 
-    // Under other sections, expect: castaway name line then event lines
-    if (currentSection && eventMatch) {
-      // Event line with points
-      if (currentCastaway) {
-        const eventKey = normalizeEventKey(eventMatch[1]);
-        const sourcePoints = parseInt(eventMatch[2], 10);
-        currentEpisode.events!.push({ castawayName: currentCastaway, eventKey, sourcePoints });
-      }
-    } else if (currentSection && !SECTION_HEADERS.has(lower)) {
-      // Castaway name line
-      currentCastaway = line;
-    }
-  }
-
-  if (currentEpisode?.episodeNumber !== undefined) {
-    episodes.push(finalize(currentEpisode));
-  }
+    episodes.push(episode);
+  });
 
   return episodes;
-}
-
-function finalize(ep: Partial<EpisodeFacts>): EpisodeFacts {
-  return {
-    episodeNumber: ep.episodeNumber!,
-    votedOutNames: ep.votedOutNames ?? [],
-    events: ep.events ?? [],
-  };
-}
-
-function normalizeEventKey(raw: string): string {
-  return raw.trim().toLowerCase();
-}
-
-function normalizeVotedOutName(raw: string): string {
-  // FSG sometimes repeats names with placement text like "Cirie (6th place)".
-  return raw.replace(/\s*\(\s*\d+(st|nd|rd|th)\s+place\s*\)\s*$/i, "").trim();
 }
 
 function hasName(names: string[], name: string): boolean {
   return names.some((n) => n.toLowerCase() === name.toLowerCase());
 }
 
-function hasVotedOutEvent(events: CastawayEvent[], castawayName: string, eventKey: string): boolean {
+function hasEvent(events: CastawayEvent[], castawayName: string, eventKey: string): boolean {
   return events.some(
     (e) =>
       e.eventKey === eventKey &&

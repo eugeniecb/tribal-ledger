@@ -53,6 +53,7 @@ Stack: Next.js 16 App Router + TypeScript + Tailwind CSS v4 + Supabase Postgres 
 - Extra wagers: risk earned vote points; wins/losses affect totals.
 - Wagers lock: Wednesday 8pm ET (configurable by season fields).
 - Sole Survivor payout: `(total_episodes - selected_at_episode + 1)` if correct.
+- FSG recap parsing reads only `h5.recap-episode` blocks and their `<dt>`/`<dd>` event lists (every castaway in a `<dd>` earns that event). `FSG_EVENT_KEYS` in `lib/fsg-parser.ts` maps FSG titles to `event_points` keys; unmapped titles (e.g. "Find Food") keep their lowercased title and score 0 unless a league adds that key.
 
 ## Commands
 

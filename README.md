@@ -39,7 +39,7 @@ Private Survivor fantasy league app built with Next.js 16, Clerk auth, and Supab
 - `app/api/` API routes for league/game actions
 - `lib/scoring.ts` scoring and payout logic
 - `lib/assignment.ts` fairness-first assignment logic
-- `lib/fsg-parser.ts` FSG recap parser
+- `lib/fsg-parser.ts` FSG recap parser (reads each episode's event list only; maps FSG event titles like "Win a Tribe Immunity Challenge" to rule keys like `tribe immunity`)
 - `lib/notifications/email.ts` email notification helper
 - `lib/supabase/server.ts` Supabase server clients
 - `supabase/migrations/` schema and feature migrations
