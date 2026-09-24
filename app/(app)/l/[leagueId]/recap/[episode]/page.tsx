@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { createUserClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { parseLeagueRuleSet } from "@/lib/rules";
 
 interface Props {
   params: Promise<{ leagueId: string; episode: string }>;
@@ -14,17 +15,18 @@ export default async function RecapPage({ params }: Props) {
   // Verify membership
   const { data: myMember } = await supabase
     .from("league_members")
-    .select("id")
+    .select("id, role")
     .eq("league_id", leagueId)
     .eq("profile_id", userId!)
     .single();
 
   if (!myMember) notFound();
+  const isAdmin = myMember.role === "owner";
 
   // If "latest", redirect to highest episode
   const { data: league } = await supabase
     .from("leagues")
-    .select("season_id")
+    .select("season_id, rule_set")
     .eq("id", leagueId)
     .single();
 
@@ -67,6 +69,16 @@ export default async function RecapPage({ params }: Props) {
   const memberMap = new Map((members ?? []).map((m: any) => [m.id, m.profiles?.display_name ?? m.id]));
 
   const facts = importData?.raw_facts;
+  const eventPoints = parseLeagueRuleSet((league as any).rule_set).event_points;
+
+  // Only events this league scores, with the league's points (not FSG's).
+  const scoredEvents = ((facts?.events ?? []) as { castawayName: string; eventKey: string }[])
+    .map((ev) => ({ ...ev, points: eventPoints[ev.eventKey.toLowerCase()] ?? 0 }))
+    .filter((ev) => ev.points !== 0);
+
+  // Players only see points once the owner approves the draft; the owner can preview.
+  const approved = draft?.status === "approved";
+  const showScores = approved || (isAdmin && !!draft);
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
@@ -87,35 +99,54 @@ export default async function RecapPage({ params }: Props) {
               <strong>Voted out:</strong> {facts.votedOutNames.join(", ")}
             </div>
           )}
-          <div className="rounded-xl border border-sand-dark overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-sand border-b border-sand-dark">
-                <tr>
-                  <th className="text-left px-4 py-2 text-jungle">Castaway</th>
-                  <th className="text-left px-4 py-2 text-jungle">Event</th>
-                  <th className="text-right px-4 py-2 text-jungle">FSG Pts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(facts.events ?? []).map((ev: any, i: number) => (
-                  <tr key={i} className="border-b border-sand-dark last:border-0 hover:bg-sand/40">
-                    <td className="px-4 py-2 text-jungle">{ev.castawayName}</td>
-                    <td className="px-4 py-2 text-jungle-mid capitalize">{ev.eventKey}</td>
-                    <td className="px-4 py-2 text-right text-jungle-mid">{ev.sourcePoints}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {!showScores ? (
+            <div className="p-4 bg-sand border border-sand-dark rounded-lg text-sm text-jungle-mid">
+              Scores for this episode are still being reviewed. Check back once they&apos;re approved.
+            </div>
+          ) : (
+            <>
+              {!approved && (
+                <p className="mb-3 text-xs text-torch">
+                  Pending review. Only you can see these points until you approve the draft.
+                </p>
+              )}
+              {scoredEvents.length === 0 ? (
+                <p className="text-sm text-jungle-mid">No castaways earned points this episode.</p>
+              ) : (
+                <div className="rounded-xl border border-sand-dark overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-sand border-b border-sand-dark">
+                      <tr>
+                        <th className="text-left px-4 py-2 text-jungle">Castaway</th>
+                        <th className="text-left px-4 py-2 text-jungle">Event</th>
+                        <th className="text-right px-4 py-2 text-jungle">Points</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scoredEvents.map((ev, i) => (
+                        <tr key={i} className="border-b border-sand-dark last:border-0 hover:bg-sand/40">
+                          <td className="px-4 py-2 text-jungle">{ev.castawayName}</td>
+                          <td className="px-4 py-2 text-jungle-mid capitalize">{ev.eventKey}</td>
+                          <td className="px-4 py-2 text-right font-semibold text-jungle">
+                            {ev.points > 0 ? "+" : ""}{ev.points}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
         </section>
       )}
 
-      {draft && (
+      {draft && showScores && (
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-lg font-semibold text-jungle">Score Draft</h2>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${draft.status === "approved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
-              {draft.status === "approved" ? "Approved" : "Pending"}
+            <h2 className="text-lg font-semibold text-jungle">Player Scores</h2>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${approved ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+              {approved ? "Approved" : "Pending"}
             </span>
           </div>
           <div className="rounded-xl border border-sand-dark overflow-hidden">
