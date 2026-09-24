@@ -97,17 +97,17 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
           <span className="text-center">Extra Wager</span>
         </div>
         {castaways.map((c) => (
-          <div key={c.id} className="grid grid-cols-[1fr_100px_100px] gap-3 items-center bg-white border border-sand-dark rounded-lg px-4 py-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-full bg-sand-dark overflow-hidden flex-shrink-0">
+          <div key={c.id} className="grid grid-cols-[1fr_100px_100px] gap-3 items-center bg-white border border-sand-dark rounded-lg px-4 py-2.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-sand-dark border-[3px] border-sand-dark overflow-hidden flex-shrink-0">
                 {c.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={c.image_url} alt={c.name} className="w-full h-full object-cover object-[50%_20%]" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs font-bold text-jungle-mid">{c.name[0]}</div>
+                  <div className="w-full h-full flex items-center justify-center text-xl font-bold text-jungle-mid">{c.name[0]}</div>
                 )}
               </div>
-              <span className="text-sm text-jungle truncate">{c.name}</span>
+              <span className="text-sm font-bold uppercase tracking-wide text-jungle truncate">{c.name}</span>
             </div>
             <input
               type="number"
