@@ -68,58 +68,78 @@ export default function SoleSurvivorClient({ memberId, castaways, activeCastaway
         </div>
       )}
 
-      <div className="space-y-2 mb-6">
-        <p className="text-xs font-medium text-jungle-mid uppercase tracking-wide mb-2">Still in the game</p>
-        {liveCastaways.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => { setSelectedId(c.id); setSaved(false); }}
-            className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
-              selectedId === c.id
-                ? "border-torch bg-torch/5"
-                : "border-sand-dark bg-white hover:border-jungle-mid"
-            }`}
-          >
-            <div className="w-9 h-9 rounded-full bg-sand-dark overflow-hidden flex-shrink-0">
-              {c.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={c.image_url} alt={c.name} className="w-full h-full object-cover object-[50%_20%]" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-sm font-bold text-jungle-mid">{c.name[0]}</div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-jungle">{c.name}</p>
-              {c.tribe && <p className="text-xs text-jungle-mid">{c.tribe}</p>}
-            </div>
-            {selectedId === c.id && <Check size={16} className="text-torch flex-shrink-0" />}
-          </button>
-        ))}
-
-        {eliminatedCastaways.length > 0 && (
-          <>
-            <p className="text-xs font-medium text-jungle-mid uppercase tracking-wide mt-4 mb-2">Voted out (ineligible)</p>
-            {eliminatedCastaways.map((c) => (
-              <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg border border-sand-dark bg-sand/50 opacity-50">
-                <div className="w-9 h-9 rounded-full bg-sand-dark overflow-hidden flex-shrink-0">
-                  <div className="w-full h-full flex items-center justify-center text-sm font-bold text-jungle-mid">{c.name[0]}</div>
-                </div>
-                <p className="text-sm text-jungle line-through">{c.name}</p>
-              </div>
-            ))}
-          </>
-        )}
+      <p className="text-xs font-medium text-jungle-mid uppercase tracking-wide mb-4">Still in the game</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-6 mb-8">
+        {liveCastaways.map((c) => {
+          const selected = selectedId === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => { setSelectedId(c.id); setSaved(false); }}
+              className="group flex flex-col items-center gap-3 text-center focus:outline-none"
+            >
+              <CastawayPhoto castaway={c} selected={selected} />
+              <span className={`text-sm font-extrabold uppercase tracking-wider ${selected ? "text-torch" : "text-jungle"}`}>
+                {c.name}
+              </span>
+              {c.tribe && <span className="-mt-2 text-xs text-jungle-mid">{c.tribe}</span>}
+            </button>
+          );
+        })}
       </div>
 
-      {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+      {eliminatedCastaways.length > 0 && (
+        <>
+          <p className="text-xs font-medium text-jungle-mid uppercase tracking-wide mb-4">Voted out (ineligible)</p>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-4 gap-y-5 mb-8">
+            {eliminatedCastaways.map((c) => (
+              <div key={c.id} className="flex flex-col items-center gap-2 text-center opacity-50">
+                <CastawayPhoto castaway={c} selected={false} />
+                <span className="text-xs font-bold uppercase tracking-wider text-jungle-mid line-through">{c.name}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
-      <button
-        onClick={handleSave}
-        disabled={saving || !selectedId || selectedId === activeCastawayId}
-        className="flex items-center gap-2 bg-torch text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-torch-dark disabled:opacity-50 transition-colors"
+      <div className="sticky bottom-0 -mx-6 px-6 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] bg-parchment/95 backdrop-blur border-t border-sand-dark">
+        {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
+        <button
+          onClick={handleSave}
+          disabled={saving || !selectedId || selectedId === activeCastawayId}
+          className="flex items-center gap-2 bg-torch text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-torch-dark disabled:opacity-50 transition-colors"
+        >
+          {saved ? <><Check size={15} /> Saved</> : saving ? "Saving…" : "Save Pick"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CastawayPhoto({ castaway, selected }: { castaway: Castaway; selected: boolean }) {
+  return (
+    <div className="relative w-full max-w-44">
+      <div
+        className={`aspect-square w-full rounded-full overflow-hidden bg-sand-dark border-[6px] transition-all ${
+          selected
+            ? "border-torch shadow-lg shadow-torch/25"
+            : "border-sand-dark group-hover:border-jungle-mid/40 group-focus-visible:border-jungle-mid"
+        } ${castaway.is_eliminated ? "grayscale" : ""}`}
       >
-        {saved ? <><Check size={15} /> Saved</> : saving ? "Saving…" : "Save Pick"}
-      </button>
+        {castaway.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={castaway.image_url} alt={castaway.name} className="w-full h-full object-cover object-[50%_20%]" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-jungle-mid">{castaway.name[0]}</div>
+        )}
+      </div>
+      {selected && (
+        <span className="absolute top-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-torch text-white shadow ring-2 ring-parchment">
+          <Check size={16} strokeWidth={3} />
+        </span>
+      )}
     </div>
   );
 }

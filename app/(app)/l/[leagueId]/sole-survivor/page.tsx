@@ -70,7 +70,7 @@ export default async function SoleSurvivorPage({ params }: Props) {
   const potentialPoints = totalEpisodes - currentEpisode + 1;
 
   return (
-    <div className="max-w-xl mx-auto px-6 py-10">
+    <div className="max-w-5xl mx-auto px-6 py-10">
       <h1 className="text-3xl font-bold text-jungle mb-2">Sole Survivor Pick</h1>
       <p className="text-jungle-mid text-sm mb-2">
         Pick who wins the whole season. Change any time — but your payout shrinks each episode.
