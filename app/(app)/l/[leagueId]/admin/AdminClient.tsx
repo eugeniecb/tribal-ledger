@@ -71,6 +71,9 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet, members
     const points = ruleSet?.event_points ?? {};
     return EVENT_KEYS.map((k) => ({ key: k, points: points[k] ?? 0 }));
   }, [ruleSet]);
+  const leaguePoints = ruleSet?.event_points ?? {};
+  // New rows ("") stay in the editable table until an event is chosen.
+  const isScoredKey = (key: string) => key === "" || EVENT_KEYS.includes(key as any);
   const memberNameMap = useMemo(
     () =>
       new Map(
@@ -112,7 +115,7 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet, members
             eventKey: e.eventKey,
             sourcePoints: Number.isFinite(e.sourcePoints) ? e.sourcePoints : 0,
           }))
-          .filter((e) => e.castawayName && EVENT_KEYS.includes(e.eventKey as any)),
+          .filter((e) => e.castawayName && e.eventKey),
       };
 
       const res = await fetch(`/api/score-drafts/${draftId}/review`, {
@@ -173,7 +176,7 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet, members
         ...prev,
         [draftId]: {
           ...facts,
-          events: [...facts.events, { castawayName: "", eventKey: EVENT_KEYS[0], sourcePoints: 0 }],
+          events: [...facts.events, { castawayName: "", eventKey: "", sourcePoints: 0 }],
         },
       };
     });
@@ -376,50 +379,53 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet, members
                     className="w-full border border-sand-dark rounded px-3 py-2 text-sm text-jungle"
                   />
 
-                  <div className="mt-3 overflow-x-auto">
+                  <p className="mt-4 text-xs text-jungle-mid">
+                    Events your league scores. Points shown are your league&apos;s rules, not FSG&apos;s.
+                  </p>
+                  <div className="mt-1 overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-jungle-mid border-b border-sand-dark">
                           <th className="text-left py-1">Castaway</th>
                           <th className="text-left py-1">Event</th>
-                          <th className="text-right py-1">FSG Pts</th>
+                          <th className="text-right py-1">League Pts</th>
                           <th className="text-right py-1"> </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {facts.events.map((ev, i) => (
-                          <tr key={`${draft.id}-${i}`} className="border-b border-sand-dark/50 last:border-0">
-                            <td className="py-1 pr-2">
-                              <input
-                                value={ev.castawayName}
-                                onChange={(e) => updateEvent(draft.id, i, { castawayName: e.target.value })}
-                                className="w-full border border-sand-dark rounded px-2 py-1"
-                              />
-                            </td>
-                            <td className="py-1 pr-2">
-                              <select
-                                value={ev.eventKey}
-                                onChange={(e) => updateEvent(draft.id, i, { eventKey: e.target.value })}
-                                className="w-full border border-sand-dark rounded px-2 py-1"
-                              >
-                                {EVENT_KEYS.map((k) => (
-                                  <option key={k} value={k}>{k}</option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="py-1 pr-2">
-                              <input
-                                type="number"
-                                value={ev.sourcePoints ?? 0}
-                                onChange={(e) => updateEvent(draft.id, i, { sourcePoints: parseInt(e.target.value || "0", 10) })}
-                                className="w-full border border-sand-dark rounded px-2 py-1 text-right"
-                              />
-                            </td>
-                            <td className="py-1 text-right">
-                              <button onClick={() => removeEvent(draft.id, i)} className="text-xs text-red-600">Remove</button>
-                            </td>
-                          </tr>
-                        ))}
+                        {facts.events.map((ev, i) => {
+                          if (!isScoredKey(ev.eventKey)) return null;
+                          const pts = leaguePoints[ev.eventKey] ?? 0;
+                          return (
+                            <tr key={`${draft.id}-${i}`} className="border-b border-sand-dark/50 last:border-0">
+                              <td className="py-1 pr-2">
+                                <input
+                                  value={ev.castawayName}
+                                  onChange={(e) => updateEvent(draft.id, i, { castawayName: e.target.value })}
+                                  className="w-full border border-sand-dark rounded px-2 py-1"
+                                />
+                              </td>
+                              <td className="py-1 pr-2">
+                                <select
+                                  value={ev.eventKey}
+                                  onChange={(e) => updateEvent(draft.id, i, { eventKey: e.target.value })}
+                                  className="w-full border border-sand-dark rounded px-2 py-1"
+                                >
+                                  {ev.eventKey === "" && <option value="" disabled>Choose event…</option>}
+                                  {EVENT_KEYS.map((k) => (
+                                    <option key={k} value={k}>{k}</option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td className="py-1 pr-2 text-right font-semibold text-jungle whitespace-nowrap">
+                                {ev.eventKey ? `${pts >= 0 ? "+" : ""}${pts}` : "—"}
+                              </td>
+                              <td className="py-1 text-right">
+                                <button onClick={() => removeEvent(draft.id, i)} className="text-xs text-red-600">Remove</button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -437,6 +443,8 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet, members
                     </div>
                   )}
                 </section>
+
+                <FsgOnlyEvents events={facts.events.filter((ev) => !isScoredKey(ev.eventKey))} />
 
                 <section>
                   <h3 className="text-sm font-semibold text-jungle mb-2">Current Draft Deltas</h3>
@@ -467,5 +475,31 @@ export default function AdminClient({ drafts, leagueId, userId, ruleSet, members
         );
       })}
     </div>
+  );
+}
+
+// FSG tracks more events than a league scores. Show them read-only so they can't be
+// turned into scoring events by accident; they stay in the recap and score 0.
+function FsgOnlyEvents({ events }: { events: EpisodeFacts["events"] }) {
+  if (!events.length) return null;
+  const byEvent = new Map<string, string[]>();
+  for (const ev of events) {
+    const names = byEvent.get(ev.eventKey) ?? [];
+    names.push(ev.castawayName);
+    byEvent.set(ev.eventKey, names);
+  }
+  return (
+    <section>
+      <h3 className="text-sm font-semibold text-jungle">Tracked by FSG, not scored in your league</h3>
+      <p className="text-xs text-jungle-mid mb-2">For reference only. These earn 0 points and can&apos;t be edited here.</p>
+      <ul className="rounded-lg border border-sand-dark bg-sand/40 divide-y divide-sand-dark/60 text-sm">
+        {Array.from(byEvent.entries()).map(([key, names]) => (
+          <li key={key} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-3 py-2">
+            <span className="capitalize text-jungle-mid">{key}</span>
+            <span className="text-jungle">{names.join(", ")}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

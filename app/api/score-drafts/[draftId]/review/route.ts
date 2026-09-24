@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
-import { parseLeagueRuleSet, EVENT_KEYS } from "@/lib/rules";
+import { parseLeagueRuleSet } from "@/lib/rules";
 import { scoreEpisodeCastaways, settleWager } from "@/lib/scoring";
 import type { EpisodeFacts, MemberDelta } from "@/lib/types";
 
@@ -10,7 +10,8 @@ const schema = z.object({
   votedOutNames: z.array(z.string().min(1)).default([]),
   events: z.array(z.object({
     castawayName: z.string().min(1),
-    eventKey: z.enum(EVENT_KEYS),
+    // Any key is kept so FSG-only events survive a review; only league rule keys score.
+    eventKey: z.string().trim().min(1).max(100),
     sourcePoints: z.number().int().optional(),
   })).default([]),
 });
