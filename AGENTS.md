@@ -49,7 +49,7 @@ Stack: Next.js 16 App Router + TypeScript + Tailwind CSS v4 + Supabase Postgres 
 
 ## Key Scoring Rules
 
-- Weekly budget: default 10 free points/week, allocated across expected vote-outs.
+- Weekly budget: default 10 free points/week **per tribe**, allocated across that tribe's expected vote-outs (one budget after the merge). Tribes sync from FSG's survivors page (`lib/fsg-tribes.ts`) on every recap import; `validateWager` enforces the per-tribe cap server-side.
 - Extra wagers: risk earned vote points; wins/losses affect totals.
 - Wagers lock: Wednesday 8pm ET (configurable by season fields) when the upcoming episode airs, and stay locked until its recap is imported; then the next episode opens (`lib/wager-lock.ts`). Only the upcoming episode (latest import + 1) accepts wagers.
 - Sole Survivor payout: `(total_episodes - selected_at_episode + 1)` if correct.

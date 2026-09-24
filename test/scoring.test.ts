@@ -120,6 +120,29 @@ describe("validateWager", () => {
     const errors = validateWager({ c1: -1 }, { c2: -5 }, 30, 10);
     expect(errors.length).toBeGreaterThan(0);
   });
+
+  describe("per tribe", () => {
+    const tribes = { s1: "Savu", s2: "Savu", t1: "Toka", t2: "Toka" };
+
+    it("gives each tribe its own budget", () => {
+      expect(validateWager({ s1: 6, s2: 4, t1: 10 }, {}, 0, 10, tribes)).toHaveLength(0);
+    });
+
+    it("rejects one tribe going over even when the total fits two budgets", () => {
+      const errors = validateWager({ s1: 8, s2: 4, t1: 2 }, {}, 0, 10, tribes);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain("Savu");
+    });
+
+    it("treats a single merged tribe as one budget", () => {
+      const merged = { s1: "Merged", t1: "Merged" };
+      expect(validateWager({ s1: 6, t1: 5 }, {}, 0, 10, merged)).toHaveLength(1);
+    });
+
+    it("keeps extra wagers as one pool across tribes", () => {
+      expect(validateWager({}, { s1: 3, t1: 3 }, 5, 10, tribes).some((e) => e.field === "extraWagers")).toBe(true);
+    });
+  });
 });
 
 describe("scoreSoleSurvivor", () => {

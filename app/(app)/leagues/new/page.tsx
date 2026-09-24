@@ -156,7 +156,7 @@ export default function NewLeaguePage() {
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-sm text-jungle">
-                Weekly wager budget
+                Weekly wager budget (per tribe)
                 <input
                   type="number"
                   min={0}

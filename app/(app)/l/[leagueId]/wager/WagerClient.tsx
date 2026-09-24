@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, AlertCircle } from "lucide-react";
+import { NO_TRIBE } from "@/lib/scoring";
 
 interface Castaway {
   id: string;
@@ -27,9 +28,20 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
-  const budgetTotal = Object.values(budget).reduce((s, v) => s + (Number(v) || 0), 0);
+  // The free budget applies separately to each tribe.
+  const tribes = Array.from(new Set(castaways.map((c) => c.tribe || NO_TRIBE))).sort((a, b) =>
+    a === NO_TRIBE ? 1 : b === NO_TRIBE ? -1 : a.localeCompare(b)
+  );
+  const budgetRemainingByTribe = new Map(
+    tribes.map((tribe) => {
+      const used = castaways
+        .filter((c) => (c.tribe || NO_TRIBE) === tribe)
+        .reduce((s, c) => s + (Number(budget[c.id]) || 0), 0);
+      return [tribe, weeklyBudget - used];
+    })
+  );
+  const overBudget = Array.from(budgetRemainingByTribe.values()).some((r) => r < 0);
   const extraTotal = Object.values(extra).reduce((s, v) => s + (Number(v) || 0), 0);
-  const budgetRemaining = weeklyBudget - budgetTotal;
   const extraRemaining = availableVotePoints - extraTotal;
 
   function setAllocation(castawayId: string, value: string, pool: "budget" | "extra") {
@@ -76,58 +88,75 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
   return (
     <form onSubmit={handleSubmit}>
       {/* Budget summary */}
-      <div className="flex gap-4 mb-6 text-sm">
-        <div className={`flex-1 p-3 rounded-lg border ${budgetRemaining < 0 ? "border-red-400 bg-red-50" : "border-sand-dark bg-sand"}`}>
-          <p className="text-jungle-mid text-xs mb-0.5">Weekly Budget Remaining</p>
-          <p className={`text-2xl font-bold ${budgetRemaining < 0 ? "text-red-600" : "text-jungle"}`}>{budgetRemaining}</p>
-          <p className="text-jungle-mid text-xs">of {weeklyBudget} free pts</p>
-        </div>
-        <div className={`flex-1 p-3 rounded-lg border ${extraRemaining < 0 ? "border-red-400 bg-red-50" : "border-sand-dark bg-sand"}`}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 text-sm">
+        {tribes.map((tribe) => {
+          const remaining = budgetRemainingByTribe.get(tribe) ?? weeklyBudget;
+          return (
+            <div key={tribe} className={`p-3 rounded-lg border ${remaining < 0 ? "border-red-400 bg-red-50" : "border-sand-dark bg-sand"}`}>
+              <p className="text-jungle-mid text-xs mb-0.5">{tribe} Budget Remaining</p>
+              <p className={`text-2xl font-bold ${remaining < 0 ? "text-red-600" : "text-jungle"}`}>{remaining}</p>
+              <p className="text-jungle-mid text-xs">of {weeklyBudget} free pts</p>
+            </div>
+          );
+        })}
+        <div className={`p-3 rounded-lg border ${extraRemaining < 0 ? "border-red-400 bg-red-50" : "border-sand-dark bg-sand"}`}>
           <p className="text-jungle-mid text-xs mb-0.5">Extra Wager Remaining</p>
           <p className={`text-2xl font-bold ${extraRemaining < 0 ? "text-red-600" : "text-jungle"}`}>{extraRemaining}</p>
-          <p className="text-jungle-mid text-xs">of {availableVotePoints} earned pts</p>
+          <p className="text-jungle-mid text-xs">of {availableVotePoints} earned pts, any tribe</p>
         </div>
       </div>
 
-      {/* Castaway rows */}
-      <div className="space-y-2 mb-6">
-        <div className="grid grid-cols-[1fr_100px_100px] gap-3 text-xs font-medium text-jungle-mid px-4 mb-1">
-          <span>Castaway</span>
-          <span className="text-center">Weekly Budget</span>
-          <span className="text-center">Extra Wager</span>
-        </div>
-        {castaways.map((c) => (
-          <div key={c.id} className="grid grid-cols-[1fr_100px_100px] gap-3 items-center bg-white border border-sand-dark rounded-lg px-4 py-2.5">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-sand-dark border-[3px] border-sand-dark overflow-hidden flex-shrink-0">
-                {c.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.image_url} alt={c.name} className="w-full h-full object-cover object-[50%_20%]" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xl font-bold text-jungle-mid">{c.name[0]}</div>
-                )}
-              </div>
-              <span className="text-sm font-bold uppercase tracking-wide text-jungle truncate">{c.name}</span>
+      {/* Castaway rows, grouped by tribe */}
+      <div className="space-y-6 mb-6">
+        {tribes.map((tribe) => (
+          <section key={tribe} className="space-y-2">
+            <div className="flex items-baseline justify-between px-1">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-jungle">{tribe}</h3>
+              <span className="text-xs text-jungle-mid">
+                {budgetRemainingByTribe.get(tribe)} of {weeklyBudget} free pts left
+              </span>
             </div>
-            <input
-              type="number"
-              min={0}
-              max={weeklyBudget}
-              value={budget[c.id] ?? ""}
-              onChange={(e) => setAllocation(c.id, e.target.value, "budget")}
-              placeholder="0"
-              className="w-full border border-sand-dark rounded px-2 py-1.5 text-center text-sm text-jungle focus:outline-none focus:ring-1 focus:ring-torch"
-            />
-            <input
-              type="number"
-              min={0}
-              max={availableVotePoints}
-              value={extra[c.id] ?? ""}
-              onChange={(e) => setAllocation(c.id, e.target.value, "extra")}
-              placeholder="0"
-              className="w-full border border-sand-dark rounded px-2 py-1.5 text-center text-sm text-jungle focus:outline-none focus:ring-1 focus:ring-torch"
-            />
-          </div>
+            <div className="grid grid-cols-[1fr_100px_100px] gap-3 text-xs font-medium text-jungle-mid px-4 mb-1">
+              <span>Castaway</span>
+              <span className="text-center">Weekly Budget</span>
+              <span className="text-center">Extra Wager</span>
+            </div>
+            {castaways
+              .filter((c) => (c.tribe || NO_TRIBE) === tribe)
+              .map((c) => (
+                <div key={c.id} className="grid grid-cols-[1fr_100px_100px] gap-3 items-center bg-white border border-sand-dark rounded-lg px-4 py-2.5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-sand-dark border-[3px] border-sand-dark overflow-hidden flex-shrink-0">
+                      {c.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.image_url} alt={c.name} className="w-full h-full object-cover object-[50%_20%]" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xl font-bold text-jungle-mid">{c.name[0]}</div>
+                      )}
+                    </div>
+                    <span className="text-sm font-bold uppercase tracking-wide text-jungle truncate">{c.name}</span>
+                  </div>
+                  <input
+                    type="number"
+                    min={0}
+                    max={weeklyBudget}
+                    value={budget[c.id] ?? ""}
+                    onChange={(e) => setAllocation(c.id, e.target.value, "budget")}
+                    placeholder="0"
+                    className="w-full border border-sand-dark rounded px-2 py-1.5 text-center text-sm text-jungle focus:outline-none focus:ring-1 focus:ring-torch"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={availableVotePoints}
+                    value={extra[c.id] ?? ""}
+                    onChange={(e) => setAllocation(c.id, e.target.value, "extra")}
+                    placeholder="0"
+                    className="w-full border border-sand-dark rounded px-2 py-1.5 text-center text-sm text-jungle focus:outline-none focus:ring-1 focus:ring-torch"
+                  />
+                </div>
+              ))}
+          </section>
         ))}
       </div>
 
@@ -141,7 +170,7 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
 
       <button
         type="submit"
-        disabled={saving || budgetRemaining < 0 || extraRemaining < 0}
+        disabled={saving || overBudget || extraRemaining < 0}
         className="flex items-center gap-2 bg-torch text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-torch-dark disabled:opacity-50 transition-colors"
       >
         {saved ? <><Check size={15} /> Saved</> : saving ? "Saving…" : "Submit Wager"}

@@ -62,7 +62,7 @@ export default async function HomePage() {
         <FeatureCard
           icon={<Flame size={28} className="text-torch" />}
           title="Weekly Wagers"
-          body="Split your 10-point budget across castaways you think will be voted out. Plus risk your earned points for a 2x return."
+          body="Split a 10-point budget per tribe across castaways you think will be voted out. Plus risk your earned points for a 2x return."
         />
         <FeatureCard
           icon={<Trophy size={28} className="text-torch" />}

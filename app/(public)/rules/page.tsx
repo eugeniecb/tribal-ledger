@@ -53,8 +53,8 @@ export default async function RulesPage() {
 
         <Section title="Weekly Wagers">
           <ul className="list-disc pl-5 space-y-2 text-jungle-mid">
-            <li>Each episode, every member gets a fresh <strong>10-point weekly budget</strong>.</li>
-            <li>Allocate any portion of those 10 points across castaways you think will be voted out.</li>
+            <li>Each episode, every member gets a fresh <strong>10-point budget for each tribe</strong> (with two tribes, that&apos;s 10 for each).</li>
+            <li>Allocate any portion of a tribe&apos;s 10 points across that tribe&apos;s castaways you think will be voted out. After the merge there&apos;s one tribe, so one budget.</li>
             <li>Correct: earn vote points equal to the amount you allocated.</li>
             <li>Wrong: those allocation points are lost (they were free).</li>
             <li>You may also wager your previously-earned vote points as <strong>extra wagers</strong>.</li>

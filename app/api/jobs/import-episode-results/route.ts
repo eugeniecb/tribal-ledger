@@ -5,6 +5,7 @@ import { scoreEpisodeCastaways, settleWager } from "@/lib/scoring";
 import type { Castaway, LeagueMember, TeamAssignment, WeeklyWager, EpisodeFacts, MemberDelta } from "@/lib/types";
 import { parseLeagueRuleSet } from "@/lib/rules";
 import { sendDraftReadyEmail } from "@/lib/notifications/email";
+import { fetchFSGTribes, fsgSurvivorsUrl } from "@/lib/fsg-tribes";
 
 export const runtime = "nodejs";
 
@@ -30,10 +31,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: `FSG fetch failed: ${err.message}` }, { status: 502 });
   }
 
-  if (!episodes.length) {
-    return NextResponse.json({ message: "No episodes parsed" });
-  }
-
   const sortedEpisodes = [...episodes].sort((a, b) => a.episodeNumber - b.episodeNumber);
 
   // Dry run if no service credentials
@@ -55,6 +52,14 @@ export async function GET(req: Request) {
 
   if (!season) {
     return NextResponse.json({ error: `Season ${seasonNumber} not found in database` }, { status: 404 });
+  }
+
+  // Refresh current tribes from FSG so next week's per-tribe wager budgets are up to date.
+  // A failure here shouldn't block scoring.
+  const tribeSync = await syncTribes(supabase, season.id, fsgSurvivorsUrl(fsgUrl, seasonNumber));
+
+  if (!episodes.length) {
+    return NextResponse.json({ message: "No episodes parsed", tribeSync });
   }
 
   // Fetch all castaways for this season
@@ -215,5 +220,31 @@ export async function GET(req: Request) {
     importedEpisodes: sortedEpisodes.map((ep) => ep.episodeNumber),
     resultsCount: results.length,
     results,
+    tribeSync,
   });
+}
+
+async function syncTribes(supabase: ReturnType<typeof createServiceClient>, seasonId: string, url: string) {
+  try {
+    const rows = await fetchFSGTribes(url);
+    if (!rows.length) return { ok: false, reason: "No tribes found on FSG survivors page" };
+
+    const { data: castaways, error } = await supabase.from("castaways").select("id, name, tribe").eq("season_id", seasonId);
+    if (error) return { ok: false, reason: error.message };
+
+    const tribeByName = new Map(rows.map((r) => [r.name.toLowerCase(), r.tribe]));
+    const updated: { name: string; from: string | null; to: string }[] = [];
+    for (const c of castaways ?? []) {
+      const tribe = tribeByName.get(c.name.toLowerCase());
+      // "Out" castaways keep their last tribe; they're no longer on the wager page.
+      if (!tribe || tribe === c.tribe) continue;
+      const { error: updateError } = await supabase.from("castaways").update({ tribe }).eq("id", c.id);
+      if (updateError) return { ok: false, reason: updateError.message, updated };
+      updated.push({ name: c.name, from: c.tribe, to: tribe });
+    }
+    return { ok: true, updated };
+  } catch (err: any) {
+    console.error("[import-episode-results] Tribe sync failed:", err);
+    return { ok: false, reason: err?.message ?? "Tribe sync failed" };
+  }
 }

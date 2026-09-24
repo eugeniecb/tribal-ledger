@@ -67,7 +67,7 @@ export default async function LeagueRulesPage({ params }: Props) {
         <h2 className="text-sm font-semibold text-jungle mb-3">Wager Settings</h2>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="flex items-center justify-between rounded-lg bg-sand px-3 py-2">
-            <span className="text-jungle-mid">Weekly Budget</span>
+            <span className="text-jungle-mid">Weekly Budget (per tribe)</span>
             <span className="font-medium text-jungle">{rules.weekly_wager_budget}</span>
           </div>
           <div className="flex items-center justify-between rounded-lg bg-sand px-3 py-2">

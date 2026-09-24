@@ -84,9 +84,26 @@ export async function POST(req: Request) {
     }
   }
 
+  // Wagers can only target castaways still in the game; the free budget applies per current tribe.
+  const { data: activeCastaways, error: castawaysError } = await supabase
+    .from("castaways")
+    .select("id, tribe")
+    .eq("season_id", (league as any)?.season_id)
+    .eq("is_eliminated", false);
+  if (castawaysError) return NextResponse.json({ error: castawaysError.message }, { status: 500 });
+  const tribeByCastawayId: Record<string, string | null> = Object.fromEntries(
+    (activeCastaways ?? []).map((c: any) => [c.id, c.tribe])
+  );
+  const unknownIds = [...Object.keys(budget_allocations), ...Object.keys(extra_wagers)].filter(
+    (id) => !(id in tribeByCastawayId)
+  );
+  if (unknownIds.length) {
+    return NextResponse.json({ error: "Wagers can only be placed on castaways still in the game" }, { status: 422 });
+  }
+
   // Validate amounts
   const availableVotePoints = Math.max(0, member.vote_points ?? 0);
-  const errors = validateWager(budget_allocations, extra_wagers, availableVotePoints, rules.weekly_wager_budget);
+  const errors = validateWager(budget_allocations, extra_wagers, availableVotePoints, rules.weekly_wager_budget, tribeByCastawayId);
   if (errors.length > 0) return NextResponse.json({ error: "Validation failed", errors }, { status: 422 });
 
   // Upsert

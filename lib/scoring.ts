@@ -182,20 +182,45 @@ export interface WagerValidationError {
   message: string;
 }
 
+export const NO_TRIBE = "No tribe";
+
+// Groups castaway ids by their current tribe (castaways without one share a group).
+export function tribeOf(castawayId: string, tribeByCastawayId: Record<string, string | null>): string {
+  return tribeByCastawayId[castawayId] || NO_TRIBE;
+}
+
 export function validateWager(
   budgetAllocations: Record<string, number>,
   extraWagers: Record<string, number>,
   availableVotePoints: number,
-  weeklyBudget: number
+  weeklyBudget: number,
+  // When given, the free budget applies separately to each tribe.
+  tribeByCastawayId?: Record<string, string | null>
 ): WagerValidationError[] {
   const errors: WagerValidationError[] = [];
 
-  const budgetTotal = Object.values(budgetAllocations).reduce((s, v) => s + v, 0);
-  if (budgetTotal > weeklyBudget) {
-    errors.push({
-      field: "budgetAllocations",
-      message: `Budget allocations total ${budgetTotal} exceeds weekly budget of ${weeklyBudget}.`,
-    });
+  if (tribeByCastawayId) {
+    const totals = new Map<string, number>();
+    for (const [id, v] of Object.entries(budgetAllocations)) {
+      const tribe = tribeOf(id, tribeByCastawayId);
+      totals.set(tribe, (totals.get(tribe) ?? 0) + v);
+    }
+    for (const [tribe, total] of totals) {
+      if (total > weeklyBudget) {
+        errors.push({
+          field: "budgetAllocations",
+          message: `${tribe} allocations total ${total}, over the ${weeklyBudget}-point budget per tribe.`,
+        });
+      }
+    }
+  } else {
+    const budgetTotal = Object.values(budgetAllocations).reduce((s, v) => s + v, 0);
+    if (budgetTotal > weeklyBudget) {
+      errors.push({
+        field: "budgetAllocations",
+        message: `Budget allocations total ${budgetTotal} exceeds weekly budget of ${weeklyBudget}.`,
+      });
+    }
   }
   for (const [id, v] of Object.entries(budgetAllocations)) {
     if (v < 0) errors.push({ field: `budgetAllocations.${id}`, message: "Allocation cannot be negative." });

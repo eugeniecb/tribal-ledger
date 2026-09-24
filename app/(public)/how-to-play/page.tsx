@@ -29,7 +29,7 @@ export default async function HowToPlayPage() {
           number={3}
           icon={<Zap className="text-torch" size={22} />}
           title="Wager each week"
-          body="Every week you get 10 free budget points to split across castaways you think will be voted out. Correct? Earn those points. Wrong? They disappear (they were free). You can also risk points you've already earned for a doubled return — or lose them."
+          body="Every week you get 10 free budget points per tribe to split across that tribe's castaways you think will be voted out. Correct? Earn those points. Wrong? They disappear (they were free). You can also risk points you've already earned for a doubled return — or lose them."
         />
         <Step
           number={4}
