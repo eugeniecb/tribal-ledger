@@ -112,7 +112,7 @@ export default async function LeagueHomePage({ params }: Props) {
   const myRank = sorted.findIndex((m: any) => m.profile_id === userId) + 1;
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10">
+    <div className="max-w-5xl mx-auto px-6 py-10">
       <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-jungle">{league.name}</h1>
@@ -154,12 +154,13 @@ export default async function LeagueHomePage({ params }: Props) {
       {/* Standings */}
       <section>
         <h2 className="text-lg font-semibold text-jungle mb-4">Standings</h2>
-        <div className="rounded-xl border border-sand-dark overflow-hidden">
+        <div className="rounded-xl border border-sand-dark overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-jungle border-b border-jungle-mid/40 text-sand/70 text-xs uppercase tracking-wide">
               <tr>
                 <th className="text-left px-4 py-2.5 font-medium w-8">#</th>
                 <th className="text-left px-4 py-2.5 font-medium">Player</th>
+                <th className="text-left px-4 py-2.5 font-medium">Team</th>
                 <th className="text-right px-4 py-2.5 font-medium">Cast Pts</th>
                 <th className="text-right px-4 py-2.5 font-medium">Vote Pts</th>
                 <th className="text-left px-4 py-2.5 font-medium">Sole Survivor</th>
@@ -188,6 +189,8 @@ export default async function LeagueHomePage({ params }: Props) {
                         </span>
                       )}
                       {isMe && <span className="ml-1.5 text-xs text-torch">(you)</span>}
+                    </td>
+                    <td className="px-4 py-3">
                       <TeamChips team={teamByMember.get(member.id) ?? []} />
                     </td>
                     <td className="px-4 py-3 text-right text-jungle-mid">{member.castaway_points}</td>
@@ -223,31 +226,35 @@ export default async function LeagueHomePage({ params }: Props) {
 }
 
 function TeamChips({ team }: { team: { id: string; name: string; image_url: string | null; is_eliminated: boolean }[] }) {
-  if (!team.length) return <p className="mt-1 text-xs font-normal text-jungle-mid/70">Team TBD</p>;
+  if (!team.length) return <span className="text-xs text-jungle-mid/70">Team TBD</span>;
   return (
-    <div className="mt-1.5 flex flex-wrap gap-1.5">
+    <div className="flex gap-3">
       {team.map((c) => (
-        <span
+        <div
           key={c.id}
           title={c.is_eliminated ? `${c.name} (voted out)` : c.name}
-          className={`inline-flex items-center gap-1.5 rounded-full bg-sand py-0.5 pl-0.5 pr-2 text-xs font-normal ${
-            c.is_eliminated ? "opacity-60" : ""
-          }`}
+          className={`flex w-14 flex-col items-center gap-1 text-center ${c.is_eliminated ? "opacity-60" : ""}`}
         >
           {c.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={c.image_url}
               alt=""
-              className={`h-6 w-6 rounded-full object-cover object-[50%_20%] ${c.is_eliminated ? "grayscale" : ""}`}
+              className={`h-12 w-12 rounded-full border-2 border-sand-dark object-cover object-[50%_20%] ${c.is_eliminated ? "grayscale" : ""}`}
             />
           ) : (
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sand-dark text-[10px] font-bold text-jungle-mid">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-sand-dark bg-sand text-sm font-bold text-jungle-mid">
               {c.name[0]}
             </span>
           )}
-          <span className={c.is_eliminated ? "text-jungle-mid line-through" : "text-jungle"}>{c.name}</span>
-        </span>
+          <span
+            className={`w-full truncate text-[11px] font-bold uppercase tracking-wide ${
+              c.is_eliminated ? "text-jungle-mid line-through" : "text-jungle"
+            }`}
+          >
+            {c.name}
+          </span>
+        </div>
       ))}
     </div>
   );
