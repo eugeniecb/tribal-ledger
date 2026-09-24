@@ -55,6 +55,23 @@ export default async function LeagueHomePage({ params }: Props) {
     soleSurvivorByMember.set((pick as any).member_id, (pick as any).castaways?.name ?? "—");
   }
 
+  const { data: teamAssignments } = memberIds.length
+    ? await supabase
+        .from("team_assignments")
+        .select("member_id, slot, castaways(id, name, image_url, is_eliminated)")
+        .in("member_id", memberIds)
+        .order("slot")
+    : { data: [] as any[] };
+
+  const teamByMember = new Map<string, { id: string; name: string; image_url: string | null; is_eliminated: boolean }[]>();
+  for (const a of teamAssignments ?? []) {
+    const castaway = (a as any).castaways;
+    if (!castaway) continue;
+    const team = teamByMember.get((a as any).member_id) ?? [];
+    team.push(castaway);
+    teamByMember.set((a as any).member_id, team);
+  }
+
   let trashTalkBanners: {
     messageId: string;
     senderName: string;
@@ -171,6 +188,7 @@ export default async function LeagueHomePage({ params }: Props) {
                         </span>
                       )}
                       {isMe && <span className="ml-1.5 text-xs text-torch">(you)</span>}
+                      <TeamChips team={teamByMember.get(member.id) ?? []} />
                     </td>
                     <td className="px-4 py-3 text-right text-jungle-mid">{member.castaway_points}</td>
                     <td className="px-4 py-3 text-right text-jungle-mid">{member.vote_points}</td>
@@ -200,6 +218,37 @@ export default async function LeagueHomePage({ params }: Props) {
           <Zap size={15} /> Place Wager
         </Link>
       </div>
+    </div>
+  );
+}
+
+function TeamChips({ team }: { team: { id: string; name: string; image_url: string | null; is_eliminated: boolean }[] }) {
+  if (!team.length) return <p className="mt-1 text-xs font-normal text-jungle-mid/70">Team TBD</p>;
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1.5">
+      {team.map((c) => (
+        <span
+          key={c.id}
+          title={c.is_eliminated ? `${c.name} (voted out)` : c.name}
+          className={`inline-flex items-center gap-1.5 rounded-full bg-sand py-0.5 pl-0.5 pr-2 text-xs font-normal ${
+            c.is_eliminated ? "opacity-60" : ""
+          }`}
+        >
+          {c.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={c.image_url}
+              alt=""
+              className={`h-6 w-6 rounded-full object-cover object-[50%_20%] ${c.is_eliminated ? "grayscale" : ""}`}
+            />
+          ) : (
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sand-dark text-[10px] font-bold text-jungle-mid">
+              {c.name[0]}
+            </span>
+          )}
+          <span className={c.is_eliminated ? "text-jungle-mid line-through" : "text-jungle"}>{c.name}</span>
+        </span>
+      ))}
     </div>
   );
 }
