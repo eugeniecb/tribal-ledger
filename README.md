@@ -21,6 +21,7 @@ Private Survivor fantasy league app built with Next.js 16, Clerk auth, and Supab
 
 ## Admin Workflow
 
+- Wagers open for the next episode once the previous recap is imported, and lock at air time (Wednesday 8pm ET by default)
 - Weekly cron imports recap data and generates pending score drafts
 - Admin can review/edit recap facts, recalculate deltas, and approve to lock standings updates
 - New pending drafts trigger email notifications to league owners (when SMTP is configured)

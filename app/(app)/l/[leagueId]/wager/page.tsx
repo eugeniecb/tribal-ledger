@@ -4,20 +4,25 @@ import { notFound } from "next/navigation";
 import WagerClient from "./WagerClient";
 import { parseLeagueRuleSet } from "@/lib/rules";
 import { Lock } from "lucide-react";
+import { isWagerLocked, lockLabelCT } from "@/lib/wager-lock";
 
 interface Props {
   params: Promise<{ leagueId: string }>;
 }
 
 // Episode number is derived from the latest episode import, or defaults to 1
-async function getCurrentEpisodeNumber(supabase: any, seasonId: string): Promise<number> {
+async function getCurrentEpisode(supabase: any, seasonId: string): Promise<{ episodeNumber: number; latestImportAt: Date | null }> {
   const { data } = await supabase
     .from("episode_imports")
-    .select("episode_number")
+    .select("episode_number, imported_at")
     .eq("season_id", seasonId)
     .order("episode_number", { ascending: false })
     .limit(1);
-  return (data?.[0]?.episode_number ?? 0) + 1;
+  const latest = data?.[0];
+  return {
+    episodeNumber: (latest?.episode_number ?? 0) + 1,
+    latestImportAt: latest?.imported_at ? new Date(latest.imported_at) : null,
+  };
 }
 
 export default async function WagerPage({ params }: Props) {
@@ -42,7 +47,7 @@ export default async function WagerPage({ params }: Props) {
 
   if (!league) notFound();
 
-  const episodeNumber = await getCurrentEpisodeNumber(supabase, league.season_id);
+  const { episodeNumber, latestImportAt } = await getCurrentEpisode(supabase, league.season_id);
   const rules = parseLeagueRuleSet((league as any).rule_set);
 
   if (!rules.wagers_enabled) {
@@ -73,16 +78,8 @@ export default async function WagerPage({ params }: Props) {
   const season: any = (league as any).seasons;
   const lockWeekday = season?.episode_lock_weekday ?? 3;
   const lockHourET = season?.episode_lock_hour_et ?? 20;
-  const lockHourCT = (lockHourET + 23) % 24;
-  const lockWeekdayLabel = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][lockWeekday] ?? "Wednesday";
-  const lockHourLabel = to12Hour(lockHourCT);
-  const lockLabel = `${lockWeekdayLabel} ${lockHourLabel} CT`;
-  const nowCt = getCtParts(new Date());
-  const isLocked = existingWager?.locked || (
-    nowCt.weekday > lockWeekday ||
-    (nowCt.weekday === lockWeekday &&
-      (nowCt.hour > lockHourCT || (nowCt.hour === lockHourCT && nowCt.minute >= 0)))
-  );
+  const lockLabel = lockLabelCT(lockWeekday, lockHourET);
+  const isLocked = existingWager?.locked || isWagerLocked({ now: new Date(), lockWeekday, lockHourET, latestImportAt });
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
@@ -121,40 +118,3 @@ export default async function WagerPage({ params }: Props) {
   );
 }
 
-function getCtParts(now: Date) {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    weekday: "short",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(now);
-  const weekday = parts.find((p) => p.type === "weekday")?.value;
-  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
-  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
-
-  const weekdayMap: Record<string, number> = {
-    Sun: 0,
-    Mon: 1,
-    Tue: 2,
-    Wed: 3,
-    Thu: 4,
-    Fri: 5,
-    Sat: 6,
-  };
-
-  return {
-    weekday: weekday ? weekdayMap[weekday] : 0,
-    hour,
-    minute,
-  };
-}
-
-function to12Hour(hour24: number): string {
-  const h = ((hour24 % 24) + 24) % 24;
-  const suffix = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:00 ${suffix}`;
-}

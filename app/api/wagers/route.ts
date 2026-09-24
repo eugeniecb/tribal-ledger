@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { validateWager } from "@/lib/scoring";
 import { parseLeagueRuleSet } from "@/lib/rules";
+import { isWagerLocked } from "@/lib/wager-lock";
 
 const schema = z.object({
   member_id: z.string().uuid(),
@@ -11,37 +12,6 @@ const schema = z.object({
   budget_allocations: z.record(z.string(), z.number().int().min(0)).default({}),
   extra_wagers: z.record(z.string(), z.number().int().min(0)).default({}),
 });
-
-function getCtParts(now: Date) {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Chicago",
-    weekday: "short",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(now);
-  const weekday = parts.find((p) => p.type === "weekday")?.value;
-  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
-  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
-
-  const weekdayMap: Record<string, number> = {
-    Sun: 0,
-    Mon: 1,
-    Tue: 2,
-    Wed: 3,
-    Thu: 4,
-    Fri: 5,
-    Sat: 6,
-  };
-
-  return {
-    weekday: weekday ? weekdayMap[weekday] : 0,
-    hour,
-    minute,
-  };
-}
 
 export async function POST(req: Request) {
   const { userId } = await auth();
@@ -87,16 +57,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Wagers are disabled for this league" }, { status: 409 });
   }
 
+  // Only the upcoming episode (latest import + 1) accepts wagers.
+  const { data: latestImport } = await supabase
+    .from("episode_imports")
+    .select("episode_number, imported_at")
+    .eq("season_id", (league as any)?.season_id)
+    .order("episode_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const currentEpisode = (latestImport?.episode_number ?? 0) + 1;
+  if (episode_number !== currentEpisode) {
+    return NextResponse.json({ error: `Wagers are only open for episode ${currentEpisode}` }, { status: 409 });
+  }
+
   const season: any = (league as any)?.seasons;
   if (season) {
-    const lockWeekday = season.episode_lock_weekday ?? 3;
-    const lockHourET = season.episode_lock_hour_et ?? 20;
-    const lockHourCT = (lockHourET + 23) % 24;
-    const nowCt = getCtParts(new Date());
-    const isLocked =
-      nowCt.weekday > lockWeekday ||
-      (nowCt.weekday === lockWeekday &&
-        (nowCt.hour > lockHourCT || (nowCt.hour === lockHourCT && nowCt.minute >= 0)));
+    const isLocked = isWagerLocked({
+      now: new Date(),
+      lockWeekday: season.episode_lock_weekday ?? 3,
+      lockHourET: season.episode_lock_hour_et ?? 20,
+      latestImportAt: latestImport?.imported_at ? new Date(latestImport.imported_at) : null,
+    });
     if (isLocked) {
       await supabase.from("weekly_wagers").update({ locked: true }).eq("member_id", member_id).eq("episode_number", episode_number);
       return NextResponse.json({ error: "Wagers are locked for this episode" }, { status: 409 });
