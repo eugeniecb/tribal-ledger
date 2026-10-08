@@ -116,17 +116,23 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
                 {budgetRemainingByTribe.get(tribe)} of {weeklyBudget} free pts left
               </span>
             </div>
-            <div className="grid grid-cols-[1fr_100px_100px] gap-3 text-xs font-medium text-jungle-mid px-4 mb-1">
+            <div className="grid grid-cols-[1fr_52px_52px] sm:grid-cols-[1fr_100px_100px] gap-2 sm:gap-3 text-xs font-medium text-jungle-mid px-3 sm:px-4 mb-1">
               <span>Castaway</span>
-              <span className="text-center">Weekly Budget</span>
-              <span className="text-center">Extra Wager</span>
+              <span className="text-center">
+                <span className="sm:hidden">Budget</span>
+                <span className="hidden sm:inline">Weekly Budget</span>
+              </span>
+              <span className="text-center">
+                <span className="sm:hidden">Extra</span>
+                <span className="hidden sm:inline">Extra Wager</span>
+              </span>
             </div>
             {castaways
               .filter((c) => (c.tribe || NO_TRIBE) === tribe)
               .map((c) => (
-                <div key={c.id} className="grid grid-cols-[1fr_100px_100px] gap-3 items-center bg-white border border-sand-dark rounded-lg px-4 py-2.5">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-sand-dark border-[3px] border-sand-dark overflow-hidden flex-shrink-0">
+                <div key={c.id} className="grid grid-cols-[1fr_52px_52px] sm:grid-cols-[1fr_100px_100px] gap-2 sm:gap-3 items-center bg-white border border-sand-dark rounded-lg px-3 sm:px-4 py-2.5">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-sand-dark border-[3px] border-sand-dark overflow-hidden flex-shrink-0">
                       {c.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={c.image_url} alt={c.name} className="w-full h-full object-cover object-[50%_20%]" />
@@ -138,21 +144,23 @@ export default function WagerClient({ memberId, episodeNumber, availableVotePoin
                   </div>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={0}
                     max={weeklyBudget}
                     value={budget[c.id] ?? ""}
                     onChange={(e) => setAllocation(c.id, e.target.value, "budget")}
                     placeholder="0"
-                    className="w-full border border-sand-dark rounded px-2 py-1.5 text-center text-sm text-jungle focus:outline-none focus:ring-1 focus:ring-torch"
+                    className="w-full border border-sand-dark rounded px-1 sm:px-2 py-1.5 text-center text-sm text-jungle focus:outline-none focus:ring-1 focus:ring-torch"
                   />
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={0}
                     max={availableVotePoints}
                     value={extra[c.id] ?? ""}
                     onChange={(e) => setAllocation(c.id, e.target.value, "extra")}
                     placeholder="0"
-                    className="w-full border border-sand-dark rounded px-2 py-1.5 text-center text-sm text-jungle focus:outline-none focus:ring-1 focus:ring-torch"
+                    className="w-full border border-sand-dark rounded px-1 sm:px-2 py-1.5 text-center text-sm text-jungle focus:outline-none focus:ring-1 focus:ring-torch"
                   />
                 </div>
               ))}
