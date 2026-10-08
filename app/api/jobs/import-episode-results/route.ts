@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { fetchAndParseFSG } from "@/lib/fsg-parser";
+import { eliminatedNames, fetchAndParseFSG } from "@/lib/fsg-parser";
 import { scoreEpisodeCastaways, settleWager } from "@/lib/scoring";
 import type { Castaway, LeagueMember, TeamAssignment, WeeklyWager, EpisodeFacts, MemberDelta } from "@/lib/types";
 import { parseLeagueRuleSet } from "@/lib/rules";
@@ -90,8 +90,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: importError.message, episode: ep.episodeNumber }, { status: 500 });
     }
 
-    // Mark voted-out castaways as eliminated
-    for (const name of ep.votedOutNames) {
+    // Mark voted-out and quit/evac castaways as eliminated
+    for (const name of eliminatedNames(ep)) {
       const castaway = (castaways ?? []).find((c: any) => c.name.toLowerCase() === name.toLowerCase());
       if (castaway && !castaway.is_eliminated) {
         await supabase

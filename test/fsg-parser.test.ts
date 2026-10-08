@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseFSGHtml } from "../lib/fsg-parser";
+import { eliminatedNames, parseFSGHtml } from "../lib/fsg-parser";
 
 // Trimmed from the real FSG recap markup (episode-recap/season/51 and /50), including
 // the tribe summary boxes, footer, and inline scripts that must be ignored.
@@ -98,8 +98,9 @@ describe("parseFSGHtml", () => {
     expect(episodes[0].events).toContainEqual({ castawayName: "Aaliyah", eventKey: "voted out", sourcePoints: 0 });
   });
 
-  it("treats quit/evac as leaving the game", () => {
-    expect(episodes[1].votedOutNames).toEqual(["Ana", "Brady"]);
+  it("treats quit/evac as leaving the game but not as voted out", () => {
+    expect(episodes[1].votedOutNames).toEqual(["Ana"]);
+    expect(eliminatedNames(episodes[1])).toEqual(["Ana", "Brady"]);
     expect(episodes[1].events).toContainEqual({ castawayName: "Brady", eventKey: "quit/evac", sourcePoints: 0 });
   });
 

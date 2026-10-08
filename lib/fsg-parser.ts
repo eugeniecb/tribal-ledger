@@ -14,8 +14,21 @@ const FSG_EVENT_KEYS: Record<string, string> = {
   "quit/evac": "quit/evac",
 };
 
-// Events that remove a castaway from the game mid-season.
-const ELIMINATION_KEYS = new Set(["voted out", "quit/evac"]);
+// Events that remove a castaway from the game mid-season. Only "voted out" counts toward
+// votedOutNames (which settles wagers); a quit/evac eliminates without paying out wagers.
+const VOTED_OUT_KEY = "voted out";
+const ELIMINATION_KEYS = new Set([VOTED_OUT_KEY, "quit/evac"]);
+
+// Everyone who left the game this episode (voted out, quit, or evacuated).
+export function eliminatedNames(facts: EpisodeFacts): string[] {
+  const names = [...facts.votedOutNames];
+  for (const e of facts.events) {
+    if (ELIMINATION_KEYS.has(e.eventKey) && !hasName(names, e.castawayName)) {
+      names.push(e.castawayName);
+    }
+  }
+  return names;
+}
 
 export async function fetchAndParseFSG(url: string): Promise<EpisodeFacts[]> {
   const res = await fetch(url, {
@@ -63,7 +76,7 @@ export function parseFSGHtml(html: string): EpisodeFacts[] {
         if (!hasEvent(episode.events, castawayName, eventKey)) {
           episode.events.push({ castawayName, eventKey, sourcePoints });
         }
-        if (ELIMINATION_KEYS.has(eventKey) && !hasName(episode.votedOutNames, castawayName)) {
+        if (eventKey === VOTED_OUT_KEY && !hasName(episode.votedOutNames, castawayName)) {
           episode.votedOutNames.push(castawayName);
         }
       });
