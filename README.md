@@ -17,6 +17,7 @@ Private Survivor fantasy league app built with Next.js 16, Clerk auth, and Supab
 - Weekly vote-out budget (10 free points by default)
 - Extra wagers using earned vote points
 - Sole Survivor pick with progressive payout
+- Standings rank by total points, tiebreaker vote points; full ties share a rank (1, 1, 3)
 - Survivor-themed trash talk messages between league members
 
 ## Admin Workflow

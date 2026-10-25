@@ -79,7 +79,7 @@ export default async function RulesPage() {
         <Section title="Standings">
           <ul className="list-disc pl-5 space-y-2 text-jungle-mid">
             <li>Each member has two point totals: <strong>castaway points</strong> (from your team) and <strong>vote points</strong> (from wagers + Sole Survivor).</li>
-            <li>Standings show total combined points. Tiebreaker: castaway points.</li>
+            <li>Standings show total combined points. Tiebreaker: vote points. Members tied on both share the same rank (e.g. 1, 1, 3).</li>
           </ul>
         </Section>
       </main>

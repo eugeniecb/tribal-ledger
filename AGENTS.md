@@ -54,6 +54,7 @@ Stack: Next.js 16 App Router + TypeScript + Tailwind CSS v4 + Supabase Postgres 
 - Wagers lock: Wednesday 8pm ET (configurable by season fields) when the upcoming episode airs, and stay locked until its recap is imported; then the next episode opens (`lib/wager-lock.ts`). Only the upcoming episode (latest import + 1) accepts wagers.
 - Only "voted out" castaways land in `votedOutNames` and settle wagers; quit/evac castaways are still marked eliminated (`eliminatedNames` in `lib/fsg-parser.ts`) but pay no wagers.
 - Sole Survivor payout: `(total_episodes - selected_at_episode + 1)` if correct.
+- Standings (`lib/standings.ts`): rank by total points, tiebreaker vote points; members tied on both share a rank (1, 1, 3).
 - FSG recap parsing reads only `h5.recap-episode` blocks and their `<dt>`/`<dd>` event lists (every castaway in a `<dd>` earns that event). `FSG_EVENT_KEYS` in `lib/fsg-parser.ts` maps FSG titles to `event_points` keys; unmapped titles (e.g. "Find Food") keep their lowercased title and score 0 unless a league adds that key.
 
 ## Commands

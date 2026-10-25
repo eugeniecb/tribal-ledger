@@ -6,6 +6,7 @@ import { Zap, Flame } from "lucide-react";
 import CopyButton from "./CopyButton";
 import TrashTalkButton from "./TrashTalkButton";
 import TrashTalkBanner from "./TrashTalkBanner";
+import { rankStandings } from "@/lib/standings";
 
 interface Props {
   params: Promise<{ leagueId: string }>;
@@ -103,13 +104,8 @@ export default async function LeagueHomePage({ params }: Props) {
     });
   }
 
-  const sorted = (members ?? []).slice().sort((a: any, b: any) => {
-    const totalB = b.castaway_points + b.vote_points;
-    const totalA = a.castaway_points + a.vote_points;
-    if (totalB !== totalA) return totalB - totalA;
-    return b.castaway_points - a.castaway_points;
-  });
-  const myRank = sorted.findIndex((m: any) => m.profile_id === userId) + 1;
+  const sorted = rankStandings((members ?? []) as any[]);
+  const myRank = sorted.find((m: any) => m.profile_id === userId)?.rank ?? 0;
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
@@ -169,19 +165,20 @@ export default async function LeagueHomePage({ params }: Props) {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((member: any, i: number) => {
+              {sorted.map((member: any) => {
                 const isMe = member.profile_id === userId;
+                const { rank } = member;
                 return (
                   <tr key={member.id} className={`border-b border-sand-dark last:border-0 ${isMe ? "bg-torch/5" : "bg-white hover:bg-sand/40"}`}>
                     <td className="px-4 py-3">
-                      {i < 3 ? (
-                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${RANK_STYLES[i]}`}>{i + 1}</span>
+                      {rank <= 3 ? (
+                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${RANK_STYLES[rank - 1]}`}>{rank}</span>
                       ) : (
-                        <span className="text-jungle-mid text-xs">{i + 1}</span>
+                        <span className="text-jungle-mid text-xs">{rank}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 font-medium text-jungle">
-                      {i === 0 && <Flame size={13} className="text-torch inline-block mr-1.5" />}
+                      {rank === 1 && <Flame size={13} className="text-torch inline-block mr-1.5" />}
                       {member.tribe_name ?? member.profiles?.display_name ?? "—"}
                       {member.tribe_name && (
                         <span className="ml-1.5 font-normal text-jungle-mid">
