@@ -158,7 +158,10 @@ export default async function LeagueHomePage({ params }: Props) {
                 <th className="text-left px-4 py-2.5 font-medium">Player</th>
                 <th className="text-left px-4 py-2.5 font-medium">Team</th>
                 <th className="text-right px-4 py-2.5 font-medium">Cast Pts</th>
-                <th className="text-right px-4 py-2.5 font-medium">Vote Pts</th>
+                <th className="text-right px-4 py-2.5 font-medium">
+                  Vote Pts
+                  <span className="block text-[10px] normal-case tracking-normal font-normal text-sand/50">tiebreaker</span>
+                </th>
                 <th className="text-left px-4 py-2.5 font-medium">Sole Survivor</th>
                 <th className="text-right px-4 py-2.5 font-medium">Total</th>
                 <th className="text-right px-4 py-2.5 font-medium">Actions</th>
