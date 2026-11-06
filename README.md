@@ -16,6 +16,7 @@ Private Survivor fantasy league app built with Next.js 16, Clerk auth, and Supab
 - Rank castaways; league owner runs a one-time fair assignment (2 castaways/member)
 - Weekly vote-out budget (10 free points by default)
 - Extra wagers using earned vote points
+- Submitted wagers remain visible on the Wager tab after locking, with editing disabled
 - Sole Survivor pick with progressive payout
 - Standings rank by total points, tiebreaker vote points; full ties share a rank (1, 1, 3)
 - Survivor-themed trash talk messages between league members

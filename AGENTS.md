@@ -13,6 +13,11 @@ Note: Next.js 16 deprecated `middleware.ts` — the file is now called `proxy.ts
 Private Survivor fantasy league app.
 Stack: Next.js 16 App Router + TypeScript + Tailwind CSS v4 + Supabase Postgres + Clerk auth.
 
+## Repository Identity
+
+- Use GitHub account `eugeniecb` and personal email `eugenie.gruman@gmail.com` for work in this repository.
+- Keep Git identity settings local to this repository.
+
 ## Architecture
 
 - `app/page.tsx`: Public landing page.
@@ -46,6 +51,7 @@ Stack: Next.js 16 App Router + TypeScript + Tailwind CSS v4 + Supabase Postgres 
 - League archiving (`archived_at`) and archived join prevention.
 - Trash talk message feature between league members.
 - Admin recap review/edit, recalc draft deltas, then approve/lock scoring.
+- Submitted wagers remain visible on the Wager tab after locking, with editing disabled.
 
 ## Key Scoring Rules
 
